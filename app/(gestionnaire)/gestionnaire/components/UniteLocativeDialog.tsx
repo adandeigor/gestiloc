@@ -23,11 +23,16 @@ export function UniteLocativeDialog({ open, onClose, proprieteId, unite, onSaved
   open: boolean;
   onClose: () => void;
   proprieteId: number;
-  unite?: any;
+  unite?: {
+    id: number;
+    nom: string;
+    description: string;
+    prix: number;
+  };
   onSaved: () => void;
   loading?: boolean;
 }) {
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<UniteLocativeFormType>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<UniteLocativeFormType>({
     resolver: zodResolver(UniteLocativeSchema),
     defaultValues: {
       nom: '',
@@ -72,8 +77,14 @@ export function UniteLocativeDialog({ open, onClose, proprieteId, unite, onSaved
       toast.success(unite ? "Unité modifiée !" : "Unité ajoutée !");
       onSaved();
       onClose();
-    } catch (e: any) {
-      toast.error(e.message || (unite ? 'Erreur lors de la modification' : 'Erreur lors de la création de l\'unité locative'));
+    } catch (e: unknown) {
+      const message =
+        e instanceof Error
+          ? e.message
+          : unite
+          ? 'Erreur lors de la modification'
+          : 'Erreur lors de la création de l\'unité locative';
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -87,14 +98,17 @@ export function UniteLocativeDialog({ open, onClose, proprieteId, unite, onSaved
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l&#39;unité locative</label>
             <Input {...register('nom')} placeholder="Nom de l'unité locative" disabled={saving || loading} />
             {errors.nom && <span className="text-red-500 text-xs">{errors.nom.message}</span>}
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <Textarea {...register('description')} placeholder="Description" disabled={saving || loading} />
             {errors.description && <span className="text-red-500 text-xs">{errors.description.message}</span>}
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Prix</label>
             <Input type="number" step="any" {...register('prix', { valueAsNumber: true })} placeholder="Prix" disabled={saving || loading} />
             {errors.prix && <span className="text-red-500 text-xs">{errors.prix.message}</span>}
           </div>

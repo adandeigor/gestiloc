@@ -19,7 +19,7 @@ export const StatCard = ({
   trendPositive,
 }: StatCardProps) => {
   return (
-    <div className="bg-gray-100  rounded-lg shadow-md shadow-gray-300 flex flex-col gap-2">
+    <div className="bg-gray-100  rounded-lg shadow-md shadow-gray-300 flex flex-col gap-2  justify-between">
       <div className="p-4 flex flex-row items-start gap-5">
         <div className="p-3 bg-[#9FC131]/20 rounded-lg overflow-hidden">
           <Icon className="w-6 h-6 text-[#9FC131]" />
@@ -27,7 +27,7 @@ export const StatCard = ({
         <div className="flex flex-col items-start gap-2">
           <p className="text-sm text-[#2C2C2C]">{title}</p>
           <div className="flex items-center gap-2">
-            <p className="text-2xl font-semibold text-[#2C2C2C]">{value}</p>
+            <p className={` font-semibold text-[#2C2C2C] ${typeof value === "string" ? "text-[14px]" : "text-2xl"}`}>{value}</p>
             {trend !== undefined && (
               <span
                 className={`text-sm ${
