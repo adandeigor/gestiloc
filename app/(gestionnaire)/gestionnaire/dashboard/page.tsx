@@ -13,9 +13,8 @@ import {
   ListCheck,
   UserPlus,
 } from "lucide-react";
-import LocataireChart from "../components/chart";
 import { getUserStats } from "../services/getUserStats";
-import LocatairesParProprieteChart from "../components/LocatairesParProprieteChart";
+import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
@@ -34,6 +33,16 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import getCookie from "@/core/getCookie";
+// Dynamically import chart components
+const LocataireChart = dynamic(() => import("../components/chart"), {
+  ssr: false,
+});
+const LocatairesParProprieteChart = dynamic(
+  () => import("../components/LocatairesParProprieteChart"),
+  {
+    ssr: false,
+  }
+);
 
 // Types définis
 type AuditLog = {
