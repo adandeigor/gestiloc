@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { StatCard } from "../components/StatCard";
 import {
   ArrowLeft,
@@ -14,7 +15,6 @@ import {
   UserPlus,
 } from "lucide-react";
 import { getUserStats } from "../services/getUserStats";
-import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import getCookie from "@/core/getCookie";
+
 // Dynamically import chart components
 const LocataireChart = dynamic(() => import("../components/chart"), {
   ssr: false,
@@ -57,7 +58,6 @@ type Gestionnaire = {
   prenom?: string;
 };
 
-// Ajoutez cette définition temporaire si vous n'avez pas encore le type importé
 type ProprieteType = {
   id: number;
   nom: string;
@@ -70,7 +70,6 @@ type ProprieteType = {
     id: number;
     proprieteId?: number;
     nom?: string;
-    // Ajoutez d'autres champs nécessaires ici
   }[];
 };
 
@@ -88,10 +87,8 @@ export default function Dashboard() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [auditLogPage, setAuditLogPage] = useState<number>(0);
-  const [openProprieteDialog, setOpenProprieteDialog] =
-    useState<boolean>(false);
-  const [openLocataireDialog, setOpenLocataireDialog] =
-    useState<boolean>(false);
+  const [openProprieteDialog, setOpenProprieteDialog] = useState<boolean>(false);
+  const [openLocataireDialog, setOpenLocataireDialog] = useState<boolean>(false);
   const [showCheckboxes, setShowCheckboxes] = useState<boolean>(false);
   const [deleteAuditLoader, setDeleteAuditLoader] = useState<boolean>(false);
   const [selectedAuditIds, setSelectedAuditIds] = useState<number[]>([]);
@@ -122,6 +119,7 @@ export default function Dashboard() {
     const token = getCookie("jwt");
     setJwt(token);
   }, []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -166,7 +164,7 @@ export default function Dashboard() {
   };
 
   const handleDeleteAudits = async () => {
-    if (selectedAuditIds.length === 0) return;
+    if (selectedAuditIds.length === 0 || !jwt) return;
     setDeleteAuditLoader(true);
     try {
       const response = await fetch(
@@ -456,7 +454,7 @@ export default function Dashboard() {
               .map((u) => ({
                 ...u,
                 proprieteId: p.id,
-                nom: u.nom ?? "", // Ensure 'nom' is present
+                nom: u.nom ?? "",
               })),
           }))}
         />

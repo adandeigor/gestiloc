@@ -79,6 +79,7 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
   const [unitOptions, setUnitOptions] = useState<UniteLocative[]>([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [formDataToSubmit, setFormDataToSubmit] = useState<LocataireFormType | null>(null);
+  const [jwt, setJwt] = useState<string | null>(null);
   const selectedProprieteId = watch('proprieteId');
   const selectedUniteLocativeId = watch('uniteLocativeId');
 
@@ -114,6 +115,7 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
   }, [selectedProprieteId, proprietes, setValue, locataire]);
 
   useEffect(() => {
+    setJwt(getCookie('jwt') as string);
     // Débogage : vérifier selectedUniteLocativeId et unitOptions
     console.log('selectedUniteLocativeId:', selectedUniteLocativeId);
     console.log('unitOptions:', unitOptions);
@@ -129,7 +131,6 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
     await submitLocataire(data);
   };
 
-  const jwt = getCookie('jwt');
   const submitLocataire = async (data: LocataireFormType) => {
     setLoading(true);
     try {
