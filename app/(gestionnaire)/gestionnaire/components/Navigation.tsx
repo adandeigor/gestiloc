@@ -95,11 +95,15 @@ export const SidebarNavigation = () => {
   // Synchronize loader with navigation events
   useEffect(() => {
     const handleNavigationStart = () => {
-      window.dispatchEvent(new CustomEvent('startLoading', { detail: { href: window.location.pathname } }));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('startLoading', { detail: { href: window.location.pathname } }));
+      }
     };
 
     const handleNavigationEnd = () => {
-      window.dispatchEvent(new CustomEvent('completeLoading'));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('completeLoading'));
+      }
     };
 
     // Use Next.js navigation events

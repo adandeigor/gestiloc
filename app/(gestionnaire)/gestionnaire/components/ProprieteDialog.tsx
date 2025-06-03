@@ -97,7 +97,7 @@ export function ProprieteDialog({ open, onClose, userId, propriete }: ProprieteD
 
   // Récupérer la localisation du navigateur
   const handleGetLocation = (): void => {
-    if (!navigator.geolocation) {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
       toast.error("La géolocalisation n'est pas supportée par ce navigateur.");
       return;
     }
