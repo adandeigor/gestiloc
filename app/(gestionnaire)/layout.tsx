@@ -7,7 +7,9 @@ const gestionnaireLayout = ({ children }: { children: React.ReactNode }) => {
     <>
       <div className="">
         <SidebarNavigation />
-        <Loader />
+        <Suspense  fallback={<div className="flex justify-center items-center h-screen">Chargement...</div>}>
+          <Loader />
+        </Suspense>
         <div className="max-w-screen-xl mx-auto w-full">
           <Suspense fallback={<div>Chargement...</div>}>{children}</Suspense>
         </div>
