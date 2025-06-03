@@ -34,7 +34,6 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import getCookie from '@/core/getCookie';
-import { ProprieteType } from '../propriete/page';
 
 // Types définis
 type AuditLog = {
@@ -47,6 +46,23 @@ type AuditLog = {
 type Gestionnaire = {
   id: number;
   prenom?: string;
+};
+
+// Ajoutez cette définition temporaire si vous n'avez pas encore le type importé
+type ProprieteType = {
+  id: number;
+  nom: string;
+  adresse: string;
+  ville: string;
+  codePostal: string;
+  pays: string;
+  localisation?: string;
+  unitesLocatives?: {
+    id: number;
+    proprieteId?: number;
+    nom?: string;
+    // Ajoutez d'autres champs nécessaires ici
+  }[];
 };
 
 type UserStats = {
@@ -391,7 +407,7 @@ export default function Dashboard() {
               .map((u) => ({
                 ...u,
                 proprieteId: p.id,
-                id: u.id as number, // Ensure id is number
+                nom: u.nom ?? '', // Ensure 'nom' is present
               })),
           }))
         }

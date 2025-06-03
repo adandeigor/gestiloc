@@ -38,7 +38,7 @@ const LocataireChart = () => {
             data: [stats.unitsOccupied || 0, stats.unitsAvailable || 0],
           }],
         });
-      } catch (e) {
+      } catch {
         setChartData(initialChartData);
       } finally {
         setLoading(false);

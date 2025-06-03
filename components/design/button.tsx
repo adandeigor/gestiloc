@@ -1,5 +1,4 @@
 import React from 'react';
-import { Icon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 // Définir les types des props
 interface ThemedButtonProps {

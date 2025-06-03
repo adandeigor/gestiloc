@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Facebook, Linkedin, Twitter } from 'lucide-react';
 
@@ -103,7 +102,7 @@ const Footer: React.FC = () => {
               href="/terms"
               className="text-white hover:text-white montserrat-regular text-sm transition-colors duration-300"
             >
-              Conditions d'utilisation
+              Conditions d&#39;utilisation
             </Link>
             <Link
               href="/legal"

@@ -9,9 +9,9 @@ export default function RootLayout({
 }>) {
     return (
         <>
-            <NavigationBarre
-                children={children} // Pass the children prop to NavigationBarre
-            />
+            <NavigationBarre>
+                {children}
+            </NavigationBarre>
             <Loader/>
             <Footer />
         </>

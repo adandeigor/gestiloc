@@ -1,19 +1,19 @@
-import { Button } from "@/components/ui/button";
-import { Skeleton } from '@/components/ui/skeleton';
+
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import Image from 'next/image';
 
 const WelcomeSection = ()=> {
-    const [imgLoaded, setImgLoaded] = useState(false);
     return (
         <motion.section
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
             className="relative h-[calc(100vh-200px)] md:h-[calc(100vh-300px)] bg-cover bg-center bg-no-repeat bg-gray-900"
-            style={{ backgroundImage: imgLoaded ? "url('/images/immeubles.jpg')" : undefined }}
+            style={{ backgroundImage:  "url('/images/immeubles.jpg')" }}
         >
-            <img
+            <Image
+                width={1920}
+                height={1080}
                 src="/images/immeubles.jpg"
                 alt="Immeubles"
                 className={`absolute inset-0 w-full h-full object-cover z-0`}

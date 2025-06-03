@@ -7,7 +7,17 @@ import { getUserStats } from '../services/getUserStats';
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-const initialBarData = {
+interface BarData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor: string;
+    borderRadius: number;
+  }[];
+}
+
+const initialBarData: BarData = {
   labels: [],
   datasets: [
     {
@@ -20,7 +30,7 @@ const initialBarData = {
 };
 
 const LocatairesParProprieteChart = () => {
-  const [barData, setBarData] = useState(initialBarData);
+  const [barData, setBarData] = useState<BarData>(initialBarData);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,12 +38,29 @@ const LocatairesParProprieteChart = () => {
       try {
         const stats = await getUserStats();
         const proprietes = stats.proprietes || [];
-        const labels = proprietes.map((p: any) => p.nom);
-        const data = proprietes.map((p: any) => {
+        interface Locataire {
+          id: string;
+          [key: string]: unknown;
+        }
+
+        interface UniteLocative {
+          locataires?: Locataire[];
+          [key: string]: unknown;
+        }
+
+        interface Propriete {
+          nom: string;
+          unitesLocatives?: UniteLocative[];
+          [key: string]: unknown;
+        }
+
+
+        const labels: string[] = (proprietes as Propriete[]).map((p) => p.nom);
+        const data: number[] = proprietes.map((p: Propriete) => {
           // Compte le nombre de locataires uniques par propriété
-          const locataires = new Set();
-          (p.unitesLocatives || []).forEach((u: any) => {
-            (u.locataires || []).forEach((l: any) => locataires.add(l.id));
+          const locataires: Set<string> = new Set();
+          (p.unitesLocatives || []).forEach((u: UniteLocative) => {
+            (u.locataires || []).forEach((l: Locataire) => locataires.add(l.id));
           });
           return locataires.size;
         });
@@ -42,7 +69,7 @@ const LocatairesParProprieteChart = () => {
           labels,
           datasets: [{ ...initialBarData.datasets[0], data }],
         });
-      } catch (e) {
+      } catch {
         setBarData(initialBarData);
       } finally {
         setLoading(false);

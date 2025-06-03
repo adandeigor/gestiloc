@@ -19,14 +19,14 @@ export default function NotFound() {
           Oups ! Page non trouvée
         </h2>
         <p className="text-gray-600 mb-8 max-w-md mx-auto montserrat-regular">
-          La page que vous cherchez n'existe pas ou a été déplacée. Retournez à l'accueil pour continuer.
+          La page que vous cherchez n&apos;existe pas ou a été déplacée. Retournez à l&apos;accueil pour continuer.
         </p>
         <Link
           href="/"
           className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-full hover:bg-primary/80 transition-all duration-300 montserrat-bold"
         >
           <Home className="w-5 h-5" />
-          Retour à l'accueil
+          Retour à l&apos;accueil
         </Link>
       </div>
     </div>

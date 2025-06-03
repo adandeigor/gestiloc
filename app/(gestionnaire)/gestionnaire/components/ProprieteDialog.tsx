@@ -25,8 +25,30 @@ const ProprieteSchema = z.object({
 
 type ProprieteFormType = z.infer<typeof ProprieteSchema>;
 
-export function ProprieteDialog({ open, onClose, userId, propriete }: { open: boolean; onClose: () => void; userId: number | string; propriete?: any }) {
-  const { register, handleSubmit, setValue, reset, formState: { errors, isSubmitting } } = useForm<ProprieteFormType>({
+
+
+interface Propriete {
+  id?: number | string;
+  nom?: string;
+  adresse?: string;
+  ville?: string;
+  codePostal?: string;
+  pays?: string;
+  localisation?: {
+    longitude?: number;
+    latitude?: number;
+  };
+}
+
+interface ProprieteDialogProps {
+  open: boolean;
+  onClose: () => void;
+  userId: number | string;
+  propriete?: Propriete;
+}
+
+export function ProprieteDialog({ open, onClose, userId, propriete }: ProprieteDialogProps) {
+  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<ProprieteFormType>({
     resolver: zodResolver(ProprieteSchema),
     defaultValues: {
       nom: '',
@@ -37,8 +59,8 @@ export function ProprieteDialog({ open, onClose, userId, propriete }: { open: bo
       localisation: { longitude: undefined, latitude: undefined },
     },
   });
-  const [loading, setLoading] = useState(false);
-  const [locationLoading, setLocationLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [locationLoading, setLocationLoading] = useState<boolean>(false);
   const [jwt, setJwt] = useState<string | null>(null);
 
   // Pré-remplir le formulaire si propriete (édition)
@@ -74,27 +96,27 @@ export function ProprieteDialog({ open, onClose, userId, propriete }: { open: bo
   }, [open, propriete, reset, setValue]);
 
   // Récupérer la localisation du navigateur
-  const handleGetLocation = () => {
+  const handleGetLocation = (): void => {
     if (!navigator.geolocation) {
       toast.error("La géolocalisation n'est pas supportée par ce navigateur.");
       return;
     }
     setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      (position: GeolocationPosition) => {
         setValue('localisation.longitude', position.coords.longitude);
         setValue('localisation.latitude', position.coords.latitude);
         toast.success('Localisation récupérée !');
         setLocationLoading(false);
       },
-      (error) => {
+      (error: GeolocationPositionError) => {
         toast.error("Impossible de récupérer la localisation : " + error.message);
         setLocationLoading(false);
       }
     );
   };
 
-  const onSubmit = async (data: ProprieteFormType) => {
+  const onSubmit = async (data: ProprieteFormType): Promise<void> => {
     setLoading(true);
     try {
       const url = propriete ? `/api/user/${userId}/propriete/${propriete.id}` : `/api/user/${userId}/propriete`;
@@ -115,15 +137,18 @@ export function ProprieteDialog({ open, onClose, userId, propriete }: { open: bo
       }
       toast.success(propriete ? 'Propriété modifiée avec succès !' : 'Propriété enregistrée avec succès !');
       onClose();
-    } catch (e: any) {
-      toast.error(e.message || (propriete ? 'Erreur lors de la modification' : 'Erreur lors de la création de la propriété'));
+    } catch (e) {
+      toast.error(
+        (e instanceof Error ? e.message : '') ||
+        (propriete ? 'Erreur lors de la modification' : 'Erreur lors de la création de la propriété')
+      );
     } finally {
       setLoading(false);
     }
   };
 
   // Mettre à jour les champs du formulaire lorsque la carte sélectionne une position
-  const handleLocationSelect = (coords: { lat: number; lng: number }) => {
+  const handleLocationSelect = (coords: { lat: number; lng: number }): void => {
     setValue('localisation.latitude', coords.lat);
     setValue('localisation.longitude', coords.lng);
   };

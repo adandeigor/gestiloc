@@ -1,7 +1,7 @@
 // gestionnaire/components/SidebarNavigation.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { navigationList } from '../utils/data';
 import { IconHomeFilled } from '@tabler/icons-react';
 import { Menu, X, LogOut, Settings, User } from 'lucide-react';
@@ -104,7 +104,7 @@ export const SidebarNavigation = () => {
 
     // Use Next.js navigation events
     if (typeof window !== 'undefined' && 'navigation' in window) {
-      const nav:any = window.navigation;
+      const nav = window.navigation as EventTarget;
       nav.addEventListener('navigate', handleNavigationStart);
       nav.addEventListener('navigatesuccess', handleNavigationEnd);
       nav.addEventListener('navigateerror', handleNavigationEnd);

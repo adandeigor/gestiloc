@@ -185,7 +185,7 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
           const err = await res.json();
           if (err?.error) {
             if (Array.isArray(err.error)) {
-              errMsg = err.error.map((e: any) => e.message).join(' | ');
+                errMsg = (err.error as { message: string }[]).map((e: { message: string }) => e.message).join(' | ');
             } else {
               errMsg = err.error;
             }
@@ -197,8 +197,12 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
       toast.success(locataire ? 'Locataire mis à jour avec succès !' : 'Locataire enregistré avec succès !');
       onClose();
       reset();
-    } catch (e: any) {
-      toast.error(e.message || (locataire ? 'Erreur lors de la mise à jour du locataire' : 'Erreur lors de la création du locataire'));
+    } catch (e) {
+      const errorMessage =
+        typeof e === "object" && e !== null && "message" in e
+          ? (e as { message?: string }).message
+          : undefined;
+      toast.error(errorMessage || (locataire ? 'Erreur lors de la mise à jour du locataire' : 'Erreur lors de la création du locataire'));
     } finally {
       setLoading(false);
       setFileUploading(false);
@@ -251,7 +255,7 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
               {errors.telephone && <span className="text-red-500 text-xs">{errors.telephone.message}</span>}
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-1">Carte d'identité (image)</label>
+              <label className="block text-xs sm:text-sm font-medium mb-1">Carte d&#39;identité (image)</label>
               <Input
                 type="file"
                 accept="image/*"
@@ -269,7 +273,7 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
               {errors.carte_identite && <span className="text-red-500 text-xs">{errors.carte_identite.message}</span>}
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-1">Photo d'identité (image)</label>
+              <label className="block text-xs sm:text-sm font-medium mb-1">Photo d&#39;identité (image)</label>
               <Input
                 type="file"
                 accept="image/*"
@@ -338,11 +342,11 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
       <Dialog open={confirmDialogOpen} onOpenChange={handleCancelChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmer le changement d'unité locative</DialogTitle>
+            <DialogTitle>Confirmer le changement d&#39;unité locative</DialogTitle>
           </DialogHeader>
           <p>
-            Vous êtes sur le point de changer l'unité locative de {locataire?.nom} {locataire?.prenom}. 
-            Cette action affectera l'association du locataire avec l'unité locative. Voulez-vous confirmer ce changement ?
+            Vous êtes sur le point de changer l&#39;unité locative de {locataire?.nom} {locataire?.prenom}. 
+            Cette action affectera l&#39;association du locataire avec l&#39;unité locative. Voulez-vous confirmer ce changement ?
           </p>
           <DialogFooter>
             <Button variant="ghost" onClick={handleCancelChange} disabled={loading}>

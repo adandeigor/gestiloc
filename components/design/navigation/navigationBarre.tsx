@@ -7,7 +7,6 @@ import ReactCountryFlag from 'react-country-flag';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import getCookie from '@/core/getCookie';
 import { useCustomRouter } from '@/core/useCustomRouter';
 

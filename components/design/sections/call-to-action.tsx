@@ -1,7 +1,5 @@
-import Image from "next/image";
-import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import Image from 'next/image';
 
 const CallToAction = () => {
   return (
@@ -27,7 +25,7 @@ const CallToAction = () => {
                 </div>
             </div>
             <div className="relative min-w-[500px] min-h-[500px] flex items-center justify-center">
-                <img
+                <Image
                   src="/images/cta.jpg"
                   alt="Call to Action Illustration"
                   width={500}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getUserStats } from '../services/getUserStats';
 import { Button } from '@/components/ui/button';
 import { ProprieteDialog } from '../components/ProprieteDialog';
+import { ConfirmDeleteDialog } from '../components/confirmDeleteDialog';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -14,46 +15,9 @@ import {
 import { Table, TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui/table';
 import { ChevronDown } from 'lucide-react';
 import { UniteLocativeDialog } from '../components/UniteLocativeDialog';
-import { z } from 'zod';
 import getCookie from '@/core/getCookie';
-
-// Schéma de validation pour Propriete
-export const ProprieteSchemaValidator = z.object({
-  nom: z.string().min(1, 'Le nom de la propriété est requis'),
-  adresse: z.string().min(1, "L'adresse de la propriété est requis"),
-  ville: z.string().min(1, 'La ville de localisation de la propriété est requise'),
-  codePostal: z.string().min(3, 'Le code postal de la propriété est requis'),
-  pays: z.string().min(2, 'Le nom du pays est requis'),
-  localisation: z.object({
-    longitude: z.number().min(-180).max(180, 'Longitude invalide'),
-    latitude: z.number().min(-90).max(90, 'Latitude invalide'),
-  }),
-});
-
-export type ProprieteType = z.infer<typeof ProprieteSchemaValidator> & {
-  id: number;
-  createdAt: string;
-  unitesLocatives?: UniteLocativeType[];
-};
-
-// Type pour UniteLocative
-type UniteLocativeType = {
-  id?: number;
-  nom: string;
-  description?: string;
-  prix: number;
-  _new?: boolean;
-  _edit?: boolean;
-  _showDesc?: boolean;
-};
-
-// Type pour les statistiques utilisateur
-type UserStats = {
-  proprietes: ProprieteType[];
-  gestionnaire?: {
-    id: number;
-  };
-};
+import { authHeader } from '@/core/auth-header';
+import { ProprieteType, UserStats, UniteLocativeType } from './type';   
 
 const ITEMS_PER_PAGE = 10;
 
@@ -69,6 +33,11 @@ export default function ProprietePage() {
   const [uniteDialogPropriete, setUniteDialogPropriete] = useState<ProprieteType | null>(null);
   const [unites, setUnites] = useState<UniteLocativeType[]>([]);
   const [loadingUnites, setLoadingUnites] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState<boolean>(false);
+  const [proprieteToDelete, setProprieteToDelete] = useState<ProprieteType | null>(null);
+  const [confirmUniteDeleteOpen, setConfirmUniteDeleteOpen] = useState<boolean>(false);
+  const [uniteToDelete, setUniteToDelete] = useState<{ unite: UniteLocativeType; index: number } | null>(null);
 
   // Charger les propriétés
   const fetchProprietes = async () => {
@@ -78,7 +47,8 @@ export default function ProprietePage() {
       console.log('User stats:', stats);
       setProprietes(stats.proprietes || []);
       setUserId(stats.gestionnaire?.id ?? null);
-    } catch {
+    } catch (error) {
+      console.error('Erreur lors du chargement des propriétés:', error);
       toast.error('Impossible de charger les propriétés');
     } finally {
       setLoading(false);
@@ -106,49 +76,189 @@ export default function ProprietePage() {
     }
   };
 
-  // Supprimer une propriété
-  const handleDelete = async (id: number) => {
-    if (!confirm('Supprimer cette propriété ?')) return;
+  // Ouvrir le dialog de confirmation pour la suppression d'une propriété
+  const handleDelete = (propriete: ProprieteType) => {
+    setProprieteToDelete(propriete);
+    setConfirmDeleteOpen(true);
+  };
+
+  // Confirmer la suppression d'une propriété
+  const confirmDelete = async () => {
+    if (!proprieteToDelete || !userId) {
+      toast.error('Utilisateur ou propriété non valide');
+      setConfirmDeleteOpen(false);
+      setProprieteToDelete(null);
+      return;
+    }
+
+    const jwt = getCookie('jwt');
+    if (!jwt) {
+      toast.error('Session non valide. Veuillez vous reconnecter.');
+      setConfirmDeleteOpen(false);
+      setProprieteToDelete(null);
+      return;
+    }
+
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/user/${userId}/propriete/${id}`, { method: 'DELETE' , 
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization-JWT': `Bearer ${getCookie('jwt')}`,
-          Authorization: process.env.NEXT_PUBLIC_API_TOKEN as string,
-        }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...authHeader(jwt),
+      };
+      Object.keys(headers).forEach((key) => {
+        if (headers[key] === undefined) delete headers[key];
       });
-      if (!res.ok) throw new Error('Erreur lors de la suppression');
+
+      const res = await fetch(`/api/user/${userId}/propriete/${proprieteToDelete.id}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Erreur de suppression de la propriété:', {
+          status: res.status,
+          statusText: res.statusText,
+          url: res.url,
+          error: errorData.message || 'Aucune information supplémentaire',
+        });
+        throw new Error(errorData.message || `Erreur ${res.status}: ${res.statusText}`);
+      }
+
       toast.success('Propriété supprimée');
-      fetchProprietes();
+      await fetchProprietes();
     } catch (error) {
-      toast.error((error as Error).message || 'Erreur lors de la suppression');
+      console.error('Erreur lors de la suppression de la propriété:', error);
+      toast.error((error as Error).message || 'Erreur lors de la suppression de la propriété');
+    } finally {
+      setIsDeleting(false);
+      setConfirmDeleteOpen(false);
+      setProprieteToDelete(null);
     }
   };
-  const jwt = getCookie('jwt') as string
 
   // Charger les unités locatives
-  const handleShowUnites = async (propriete: ProprieteType) => {
+  const fetchUnites = async (propriete: ProprieteType) => {
+    if (!userId) {
+      toast.error('Utilisateur non valide');
+      return;
+    }
+
     setUniteDialogPropriete(propriete);
     setLoadingUnites(true);
     try {
-      const res = await fetch(`/api/user/${userId}/propriete/${propriete.id}/uniteLocative`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization-JWT': `Bearer ${jwt}`,
-          Authorization: process.env.NEXT_PUBLIC_API_TOKEN as string,
-        },
-        method: 'GET'
+      const jwt = getCookie('jwt');
+      if (!jwt) {
+        throw new Error('Session non valide');
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...authHeader(jwt),
+      };
+      Object.keys(headers).forEach((key) => {
+        if (headers[key] === undefined) delete headers[key];
       });
-      if (!res.ok) throw new Error('Erreur lors du chargement des unités locatives');
+
+      const res = await fetch(`/api/user/${userId}/propriete/${propriete.id}/uniteLocative`, {
+        headers,
+        method: 'GET',
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Erreur de chargement des unités:', {
+          status: res.status,
+          statusText: res.statusText,
+          url: res.url,
+          error: errorData.message || 'Aucune information supplémentaire',
+        });
+        throw new Error(errorData.message || `Erreur ${res.status}: ${res.statusText}`);
+      }
+
       const data = await res.json();
       const unites = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
       setUnites(unites);
-      console.log('Unites locatives:', unites);
+      console.log('Unités locatives:', unites);
     } catch (error) {
+      console.error('Erreur lors du chargement des unités:', error);
       toast.error((error as Error).message || 'Erreur lors du chargement des unités locatives');
       setUnites([]);
     } finally {
       setLoadingUnites(false);
+    }
+  };
+
+  // Ouvrir le dialog de confirmation pour la suppression d'une unité
+  const handleDeleteUnite = (unite: UniteLocativeType, index: number) => {
+    setUniteToDelete({ unite, index });
+    setConfirmUniteDeleteOpen(true);
+  };
+
+  // Confirmer la suppression d'une unité locative
+  const confirmDeleteUnite = async () => {
+    if (!uniteToDelete || !uniteDialogPropriete || !userId) {
+      toast.error('Données non valides pour la suppression');
+      setConfirmUniteDeleteOpen(false);
+      setUniteToDelete(null);
+      return;
+    }
+
+    const { unite, index } = uniteToDelete;
+
+    if (!unite.id) {
+      setUnites((prev) => prev.filter((_, i) => i !== index));
+      setConfirmUniteDeleteOpen(false);
+      setUniteToDelete(null);
+      return;
+    }
+
+    const jwt = getCookie('jwt');
+    if (!jwt) {
+      toast.error('Session non valide. Veuillez vous reconnecter.');
+      setConfirmUniteDeleteOpen(false);
+      setUniteToDelete(null);
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...authHeader(jwt),
+      };
+      Object.keys(headers).forEach((key) => {
+        if (headers[key] === undefined) delete headers[key];
+      });
+
+      const res = await fetch(
+        `/api/user/${userId}/propriete/${uniteDialogPropriete.id}/uniteLocative/${unite.id}`,
+        {
+          method: 'DELETE',
+          headers,
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Erreur de suppression de l\'unité:', {
+          status: res.status,
+          statusText: res.statusText,
+          url: res.url,
+          error: errorData.message || 'Aucune information supplémentaire',
+        });
+        throw new Error(errorData.message || `Erreur ${res.status}: ${res.statusText}`);
+      }
+
+      toast.success('Unité supprimée');
+      setUnites((prev) => prev.filter((_, i) => i !== index));
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'unité:', error);
+      toast.error((error as Error).message || 'Erreur lors de la suppression de l\'unité');
+    } finally {
+      setIsDeleting(false);
+      setConfirmUniteDeleteOpen(false);
+      setUniteToDelete(null);
     }
   };
 
@@ -160,10 +270,11 @@ export default function ProprietePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-lg font-semibold">Chargement des propriétés...</div>
+        <div className="text-lg font-light text-gray-400">Chargement des propriétés...</div>
       </div>
     );
   }
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-2">
       <div className="flex justify-between items-center mb-6">
@@ -204,10 +315,10 @@ export default function ProprietePage() {
                         Voir sur la carte
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSelectedPropriete(prop)}>Modifier</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDelete(prop.id)} className="text-red-600">
+                      <DropdownMenuItem onClick={() => handleDelete(prop)} className="text-red-600">
                         Supprimer
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleShowUnites(prop)}>
+                      <DropdownMenuItem onClick={() => fetchUnites(prop)}>
                         Gérer les unités locatives
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -245,7 +356,7 @@ export default function ProprietePage() {
           fetchProprietes();
         }}
         userId={userId ?? 0}
-        propriete={selectedPropriete}
+        propriete={selectedPropriete as ProprieteType}
       />
       {mapUrl && selectedMapPropriete && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -304,102 +415,88 @@ export default function ProprietePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {safeUnites.length === 0 && (
+                  {loadingUnites ? (
+                    <tr>
+                      <td colSpan={4} className="text-center py-8">
+                        <span className="animate-spin inline-block mr-2 border-2 border-gray-300 border-t-primary rounded-full w-6 h-6 align-middle"></span>
+                        Chargement des unités locatives...
+                      </td>
+                    </tr>
+                  ) : safeUnites.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="text-center text-gray-400 py-6">
                         Aucune unité locative
                       </td>
                     </tr>
-                  )}
-                  {safeUnites.map((unite, idx) => (
-                    <tr
-                      key={unite.id || `new-${idx}`}
-                      className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
-                    >
-                      <td className="px-4 py-2 text-gray-900">{unite.nom}</td>
-                      <td className="px-4 py-2 text-gray-600">
-                        {unite.description?.slice(0, 7)}...
-                        {unite._showDesc && (
-                          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full relative">
-                              <button
-                                className="absolute top-2 right-2 text-gray-500 hover:text-black text-xl"
+                  ) : (
+                    safeUnites.map((unite, idx) => (
+                      <tr
+                        key={unite.id || `new-${idx}`}
+                        className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
+                      >
+                        <td className="px-4 py-2 text-gray-900">{unite.nom}</td>
+                        <td className="px-4 py-2 text-gray-600">
+                          {unite.description?.slice(0, 7)}...
+                          {unite._showDesc && (
+                            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                              <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full relative">
+                                <button
+                                  className="absolute top-2 right-2 text-gray-500 hover:text-black text-xl"
+                                  onClick={() =>
+                                    setUnites((prev) =>
+                                      prev.map((u, i) => (i === idx ? { ...u, _showDesc: false } : u))
+                                    )
+                                  }
+                                >
+                                  ×
+                                </button>
+                                <h3 className="text-lg font-semibold mb-2">Description complète</h3>
+                                <div className="text-gray-800 whitespace-pre-line">{unite.description}</div>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-primary font-semibold">{unite.prix}</td>
+                        <td className="px-4 py-2 flex gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost">
+                                <span className="sr-only">Actions</span>
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                                  <circle cx="5" cy="12" r="2" fill="currentColor" />
+                                  <circle cx="12" cy="12" r="2" fill="currentColor" />
+                                  <circle cx="19" cy="12" r="2" fill="currentColor" />
+                                </svg>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
                                 onClick={() =>
                                   setUnites((prev) =>
-                                    prev.map((u, i) => (i === idx ? { ...u, _showDesc: false } : u))
+                                    prev.map((u, i) => (i === idx ? { ...u, _edit: true } : u))
                                   )
                                 }
                               >
-                                ×
-                              </button>
-                              <h3 className="text-lg font-semibold mb-2">Description complète</h3>
-                              <div className="text-gray-800 whitespace-pre-line">{unite.description}</div>
-                            </div>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-primary font-semibold">{unite.prix}</td>
-                      <td className="px-4 py-2 flex gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="icon" variant="ghost">
-                              <span className="sr-only">Actions</span>
-                              <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                                <circle cx="5" cy="12" r="2" fill="currentColor" />
-                                <circle cx="12" cy="12" r="2" fill="currentColor" />
-                                <circle cx="19" cy="12" r="2" fill="currentColor" />
-                              </svg>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setUnites((prev) =>
-                                  prev.map((u, i) => (i === idx ? { ...u, _edit: true } : u))
-                                )
-                              }
-                            >
-                              Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={async () => {
-                                if (!unite.id) {
-                                  setUnites((prev) => prev.filter((_, i) => i !== idx));
-                                  return;
+                                Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteUnite(unite, idx)} className="text-red-600">
+                                Supprimer
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setUnites((prev) =>
+                                    prev.map((u, i) => (i === idx ? { ...u, _showDesc: true } : u))
+                                  )
                                 }
-                                if (!confirm('Supprimer cette unité ?')) return;
-                                try {
-                                  setLoadingUnites(true);
-                                  const res = await fetch(
-                                    `/api/user/${userId}/propriete/${uniteDialogPropriete.id}/uniteLocative/${unite.id}`,
-                                    { method: 'DELETE' }
-                                  );
-                                  if (!res.ok) throw new Error('Erreur lors de la suppression');
-                                  toast.success('Unité supprimée');
-                                  setUnites((prev) => prev.filter((_, i) => i !== idx));
-                                } catch (error) {
-                                  toast.error((error as Error).message || 'Erreur lors de la suppression');
-                                } finally {
-                                  setLoadingUnites(false);
-                                }
-                              }}
-                            >
-                              Supprimer
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setUnites((prev) =>
-                                  prev.map((u, i) => (i === idx ? { ...u, _showDesc: true } : u))
-                                )
-                              }
-                            >
-                              Voir la description
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
+                              >
+                                Voir la description
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -431,22 +528,40 @@ export default function ProprietePage() {
                     onSaved={async () => {
                       setLoadingUnites(true);
                       try {
+                        const jwt = getCookie('jwt');
+                        if (!jwt) {
+                          throw new Error('Session non valide');
+                        }
+                        const headers: Record<string, string> = {
+                          'Content-Type': 'application/json',
+                          ...authHeader(jwt),
+                        };
+                        Object.keys(headers).forEach((key) => {
+                          if (headers[key] === undefined) delete headers[key];
+                        });
                         const res = await fetch(
-                          `/api/user/${userId}/propriete/${uniteDialogPropriete.id}/uniteLocative`, {
+                          `/api/user/${userId}/propriete/${uniteDialogPropriete.id}/uniteLocative`,
+                          {
                             method: 'GET',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization-JWT': `Bearer ${jwt}`,
-                              Authorization: process.env.NEXT_PUBLIC_API_TOKEN as string,
-                            }
+                            headers,
                           }
                         );
-                        if (!res.ok) throw new Error('Erreur lors du rafraîchissement');
+                        if (!res.ok) {
+                          const errorData = await res.json().catch(() => ({}));
+                          console.error('Erreur de rafraîchissement des unités:', {
+                            status: res.status,
+                            statusText: res.statusText,
+                            url: res.url,
+                            error: errorData.message || 'Aucune information supplémentaire',
+                          });
+                          throw new Error(errorData.message || `Erreur ${res.status}: ${res.statusText}`);
+                        }
                         const data = await res.json();
                         const unites = Array.isArray(data?.data) ? data.data : [];
                         setUnites(unites);
                       } catch (error) {
-                        toast.error((error as Error).message || 'Erreur lors du rafraîchissement');
+                        console.error('Erreur lors du rafraîchissement des unités:', error);
+                        toast.error((error as Error).message || 'Erreur lors du rafraîchissement des unités');
                       } finally {
                         setLoadingUnites(false);
                       }
@@ -456,6 +571,30 @@ export default function ProprietePage() {
             )}
           </div>
         </div>
+      )}
+      {proprieteToDelete && (
+        <ConfirmDeleteDialog
+          open={confirmDeleteOpen}
+          onClose={() => {
+            setConfirmDeleteOpen(false);
+            setProprieteToDelete(null);
+          }}
+          onConfirm={confirmDelete}
+          loading={isDeleting}
+          proprieteNom={`la propriété "${proprieteToDelete.nom}"`}
+        />
+      )}
+      {uniteToDelete && (
+        <ConfirmDeleteDialog
+          open={confirmUniteDeleteOpen}
+          onClose={() => {
+            setConfirmUniteDeleteOpen(false);
+            setUniteToDelete(null);
+          }}
+          onConfirm={confirmDeleteUnite}
+          loading={isDeleting}
+          proprieteNom={`l'unité locative "${uniteToDelete.unite.nom}"`}
+        />
       )}
     </div>
   );

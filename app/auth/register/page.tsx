@@ -15,15 +15,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import PhoneInput from 'react-phone-number-input';
 import fr from 'react-phone-number-input/locale/fr';
 import 'react-phone-number-input/style.css';
 import {  isValidPhoneNumber } from 'react-phone-number-input';
-import { httpClient } from '@/core/httpClient';
 import { toast } from 'sonner';
 import { useCustomRouter } from '@/core/useCustomRouter';
+import { authHeader } from '@/core/auth-header';
+import getCookie from '@/core/getCookie';
 
 const registerSchema = z
   .object({
@@ -95,11 +95,18 @@ const RegisterForm: React.FC = () => {
   const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
     setErrorMessage(null);
-
+    const jwt = getCookie('jwt') as string
     try {
+       const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...authHeader(jwt),
+      };
+      Object.keys(headers).forEach((key) => {
+        if (headers[key] === undefined) delete headers[key];
+      });
       const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           prenom: data.firstName,
           nom: data.lastName,

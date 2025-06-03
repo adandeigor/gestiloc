@@ -1,6 +1,9 @@
  const Page = ()=>{
     return (
-        <>Dashboard Page</>
+        <div>
+            <h1>Gestionnaire Documents</h1>
+            <p>Cette page est dédiée à la gestion des documents.</p>
+        </div>
     )
 }
 

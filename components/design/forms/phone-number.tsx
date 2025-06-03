@@ -23,7 +23,7 @@ interface PhoneInputProps {
   value?: string;
   onChange: (value: string) => void;
   error?: string;
-  register: any; // From react-hook-form
+  register: (name: string) => Record<string, unknown>; // From react-hook-form
   name: string;
 }
 
