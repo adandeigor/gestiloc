@@ -186,7 +186,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen">
+    <Suspense  fallback={<div>Chargement du tableau de bord...</div>}>
+      <div className="min-h-screen">
       <div className="max-w-7xl mx-auto py-6 px-4">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold">
@@ -447,5 +448,7 @@ export default function Dashboard() {
         }))}
       />
     </div>
+    </Suspense>
+    
   );
 }
