@@ -43,7 +43,6 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
 
     // Créer le PDF
     const doc = new PDFDocument({ size: [width, height], font: `${process.cwd()}/public/fonts/open-sans.ttf` });
-    const fontPath = path.resolve(process.cwd(), 'public/fonts/');
     
     // Gérer les erreurs du flux
     writableStream.on('error', (streamError) => {
