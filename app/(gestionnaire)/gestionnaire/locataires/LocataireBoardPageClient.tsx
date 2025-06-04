@@ -539,6 +539,7 @@ export default function LocataireBoardPage() {
                   src={previewDocument.url}
                   className="w-full h-[60vh] border rounded"
                   title={previewDocument.type}
+                  allow="autoplay"
                 />
               ) : (
                 <p className="text-gray-500">
@@ -574,7 +575,7 @@ export default function LocataireBoardPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => setPreviewDocument(doc)}
-                        disabled={!isImage(doc.url) && !isPDF(doc.url)}
+                        disabled={!(isImage(doc.url) || isPDF(doc.url))}
                       >
                         Prévisualiser
                       </Button>

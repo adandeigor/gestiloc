@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'gwsosglvvobbfayijeri.supabase.co',
+        port: '', // Laissez vide si aucun port spécifique n'est utilisé
+        pathname: '/storage/v1/object/public/**', // Spécifiez le chemin si nécessaire
+      },
+    ],
+  },
 };
 
 export default nextConfig;
