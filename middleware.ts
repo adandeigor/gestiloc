@@ -35,7 +35,7 @@ export default async function middleware(request: NextRequest) {
   if ((pathname.startsWith('/gestionnaire') || pathname.startsWith('/complete-profile') || pathname.startsWith('/auth/register')) && token && userId) {
     try {
       console.log(`[Middleware] Vérification du profil pour userId: ${userId}`);
-      const res = await fetch(`https://api-gestiloc.vercel.app/api/user/profile-complete/${userId}`, {
+      const res = await fetch(`/api/user/profile-complete/${userId}`, {
         headers: {
           Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN || ''}`,
           "Authorization-JWT": `Bearer ${token}`,
