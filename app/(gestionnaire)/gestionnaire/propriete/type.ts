@@ -35,5 +35,6 @@ export type UserStats = {
   proprietes: ProprieteType[];
   gestionnaire?: {
     id: number;
+    statut:string
   };
 };

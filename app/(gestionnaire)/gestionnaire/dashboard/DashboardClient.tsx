@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { StatCard } from "../components/StatCard";
 import {
+  AlertCircleIcon,
   ArrowLeft,
   ArrowRight,
   Building2,
@@ -34,6 +35,7 @@ import { toast } from "sonner";
 import getCookie from "@/core/getCookie";
 import LocatairesParProprieteChart from "../components/LocatairesParProprieteChart";
 import LocataireChart from "../components/chart";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // Types définis
 type AuditLog = {
@@ -46,6 +48,9 @@ type AuditLog = {
 type Gestionnaire = {
   id: number;
   prenom?: string;
+  statut?: string;
+  email?: string;
+  telephone?: string;
 };
 
 type ProprieteType = {
@@ -186,6 +191,17 @@ export default function DashboardClient() {
     }
   };
 
+  if (userStats.gestionnaire?.statut === "EN_ATTENTE") {
+    return (
+      <Alert variant="destructive" className="max-w-2xl mx-auto mt-8">
+        <AlertCircleIcon className="mr-4 h-4 w-4" aria-label="Icône d'avertissement" />
+        <AlertTitle>Compte en attente</AlertTitle>
+        <AlertDescription>
+          Votre compte est en attente de validation. Veuillez patienter pour sa validation.
+        </AlertDescription>
+      </Alert>
+    );
+  }
   return (
     <Suspense fallback={<div>Chargement du tableau de bord...</div>}>
       <div className="min-h-screen">

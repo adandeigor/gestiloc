@@ -1,17 +1,34 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
-import { MoreHorizontal, Download, Loader2 } from 'lucide-react';
-import { getUserStats } from '../services/getUserStats';
-import { LocataireDialog } from '../components/LocataireDialog';
-import getCookie from '@/core/getCookie';
-import Image from 'next/image';
-import { authHeader } from '@/core/auth-header';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import {
+  MoreHorizontal,
+  Download,
+  Loader2,
+  AlertCircleIcon,
+} from "lucide-react";
+import { getUserStats } from "../services/getUserStats";
+import { LocataireDialog } from "../components/LocataireDialog";
+import getCookie from "@/core/getCookie";
+import Image from "next/image";
+import { authHeader } from "@/core/auth-header";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface Locataire {
   id: number;
@@ -43,9 +60,12 @@ interface Document {
 
 export default function LocataireBoardPage() {
   const [locataires, setLocataires] = useState<Locataire[]>([]);
+  const [userStats, setUserStats] = useState<{
+    gestionnaire?: { statut: string };
+  }>({});
   const [filteredLocataires, setFilteredLocataires] = useState<Locataire[]>([]);
   const [proprietes, setProprietes] = useState<Propriete[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
@@ -53,7 +73,9 @@ export default function LocataireBoardPage() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openDocumentsDialog, setOpenDocumentsDialog] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
-  const [selectedLocataire, setSelectedLocataire] = useState<Locataire | null>(null);
+  const [selectedLocataire, setSelectedLocataire] = useState<Locataire | null>(
+    null
+  );
   const [documents, setDocuments] = useState<Document[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
@@ -63,14 +85,15 @@ export default function LocataireBoardPage() {
     setLoading(true);
     try {
       const stats = await getUserStats();
+      setUserStats(stats);
       const locatairesList = stats.locataires || [];
       setLocataires(locatairesList);
       setFilteredLocataires(locatairesList);
       setProprietes(stats.proprietes || []);
-      console.log('Locataires chargés:', locatairesList);
+      console.log("Locataires chargés:", locatairesList);
     } catch (error) {
-      console.error('Erreur lors du chargement des locataires:', error);
-      toast.error('Erreur lors du chargement des locataires');
+      console.error("Erreur lors du chargement des locataires:", error);
+      toast.error("Erreur lors du chargement des locataires");
     } finally {
       setLoading(false);
     }
@@ -78,16 +101,16 @@ export default function LocataireBoardPage() {
 
   useEffect(() => {
     fetchData();
-    const userIdStr = getCookie('userId');
+    const userIdStr = getCookie("userId");
     setUserId(userIdStr ? parseInt(userIdStr, 10) : null);
   }, []);
 
   useEffect(() => {
-    console.log('Recherche:', searchQuery);
+    console.log("Recherche:", searchQuery);
     const trimmedQuery = searchQuery.trim().toLowerCase();
     const filtered = locataires.filter((locataire) => {
-      const nom = locataire.nom?.toLowerCase() || '';
-      const prenom = locataire.prenom?.toLowerCase() || '';
+      const nom = locataire.nom?.toLowerCase() || "";
+      const prenom = locataire.prenom?.toLowerCase() || "";
       const fullName = `${nom} ${prenom}`.trim();
       return (
         fullName.includes(trimmedQuery) ||
@@ -96,7 +119,7 @@ export default function LocataireBoardPage() {
       );
     });
     setFilteredLocataires(filtered);
-    console.log('Locataires filtrés:', filtered);
+    console.log("Locataires filtrés:", filtered);
   }, [searchQuery, locataires]);
 
   const handleCreate = () => setOpenCreateDialog(true);
@@ -108,15 +131,15 @@ export default function LocataireBoardPage() {
 
   const handleDelete = async () => {
     if (!selectedLocataire || !userId) {
-      toast.error('Locataire ou utilisateur non valide');
+      toast.error("Locataire ou utilisateur non valide");
       setOpenDeleteDialog(false);
       setSelectedLocataire(null);
       return;
     }
 
-    const jwt = getCookie('jwt');
+    const jwt = getCookie("jwt");
     if (!jwt) {
-      toast.error('Session non valide. Veuillez vous reconnecter.');
+      toast.error("Session non valide. Veuillez vous reconnecter.");
       setOpenDeleteDialog(false);
       setSelectedLocataire(null);
       return;
@@ -124,14 +147,20 @@ export default function LocataireBoardPage() {
 
     setActionLoading(true);
     try {
-      const prop = proprietes.find((p) => p.unitesLocatives.some((u) => u.id === selectedLocataire.uniteLocativeId));
-      const unite = prop?.unitesLocatives.find((u) => u.id === selectedLocataire.uniteLocativeId);
+      const prop = proprietes.find((p) =>
+        p.unitesLocatives.some(
+          (u) => u.id === selectedLocataire.uniteLocativeId
+        )
+      );
+      const unite = prop?.unitesLocatives.find(
+        (u) => u.id === selectedLocataire.uniteLocativeId
+      );
       if (!prop || !unite) {
-        throw new Error('Propriété ou unité locative non trouvée');
+        throw new Error("Propriété ou unité locative non trouvée");
       }
 
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...authHeader(jwt),
       };
       Object.keys(headers).forEach((key) => {
@@ -140,28 +169,32 @@ export default function LocataireBoardPage() {
 
       const url = `/api/user/${userId}/propriete/${prop.id}/uniteLocative/${unite.id}/locataire/${selectedLocataire.id}`;
       const res = await fetch(url, {
-        method: 'DELETE',
+        method: "DELETE",
         headers,
       });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        console.error('Erreur de suppression du locataire:', {
+        console.error("Erreur de suppression du locataire:", {
           status: res.status,
           statusText: res.statusText,
           url: res.url,
-          error: errorData.message || 'Aucune information supplémentaire',
+          error: errorData.message || "Aucune information supplémentaire",
         });
-        throw new Error(errorData.message || `Erreur ${res.status}: ${res.statusText}`);
+        throw new Error(
+          errorData.message || `Erreur ${res.status}: ${res.statusText}`
+        );
       }
 
-      toast.success('Locataire supprimé avec succès !');
+      toast.success("Locataire supprimé avec succès !");
       setOpenDeleteDialog(false);
       setSelectedLocataire(null);
       await fetchData();
     } catch (error) {
-      console.error('Erreur lors de la suppression du locataire:', error);
-      toast.error((error as Error).message || 'Erreur lors de la suppression du locataire');
+      console.error("Erreur lors de la suppression du locataire:", error);
+      toast.error(
+        (error as Error).message || "Erreur lors de la suppression du locataire"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -171,31 +204,35 @@ export default function LocataireBoardPage() {
     setDocumentsLoading(true);
     setDocuments([]);
     if (!userId) {
-      toast.error('Utilisateur non valide');
+      toast.error("Utilisateur non valide");
       setDocumentsLoading(false);
       return;
     }
 
-    const jwt = getCookie('jwt');
+    const jwt = getCookie("jwt");
     if (!jwt) {
-      toast.error('Session non valide. Veuillez vous reconnecter.');
+      toast.error("Session non valide. Veuillez vous reconnecter.");
       setDocumentsLoading(false);
       return;
     }
 
     try {
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...authHeader(jwt),
       };
       Object.keys(headers).forEach((key) => {
         if (headers[key] === undefined) delete headers[key];
       });
 
-      const prop = proprietes.find((p) => p.unitesLocatives.some((u) => u.id === locataire.uniteLocativeId));
-      const unite = prop?.unitesLocatives.find((u) => u.id === locataire.uniteLocativeId);
+      const prop = proprietes.find((p) =>
+        p.unitesLocatives.some((u) => u.id === locataire.uniteLocativeId)
+      );
+      const unite = prop?.unitesLocatives.find(
+        (u) => u.id === locataire.uniteLocativeId
+      );
       if (!prop || !unite) {
-        throw new Error('Propriété ou unité locative non trouvée');
+        throw new Error("Propriété ou unité locative non trouvée");
       }
 
       const contratRes = await fetch(
@@ -204,13 +241,16 @@ export default function LocataireBoardPage() {
       );
       if (!contratRes.ok) {
         const errorData = await contratRes.json().catch(() => ({}));
-        console.error('Erreur de récupération des contrats:', {
+        console.error("Erreur de récupération des contrats:", {
           status: contratRes.status,
           statusText: contratRes.statusText,
           url: contratRes.url,
-          error: errorData.message || 'Aucune information supplémentaire',
+          error: errorData.message || "Aucune information supplémentaire",
         });
-        throw new Error(errorData.message || `Erreur ${contratRes.status}: ${contratRes.statusText}`);
+        throw new Error(
+          errorData.message ||
+            `Erreur ${contratRes.status}: ${contratRes.statusText}`
+        );
       }
 
       const contratData = await contratRes.json();
@@ -219,12 +259,15 @@ export default function LocataireBoardPage() {
         locataireId: number;
         url?: string;
       }
-      const contrats: Contrat[] = (contratData?.filter((c: { locataireId: number }) => c.locataireId === locataire.id) || []) as Contrat[];
+      const contrats: Contrat[] = (contratData?.filter(
+        (c: { locataireId: number }) => c.locataireId === locataire.id
+      ) || []) as Contrat[];
       const newDocuments: Document[] = [];
 
       if (contrats.length > 0) {
         const contrat = contrats[0];
-        if (contrat.url) newDocuments.push({ type: 'Contrat', url: contrat.url });
+        if (contrat.url)
+          newDocuments.push({ type: "Contrat", url: contrat.url });
 
         const etatRes = await fetch(
           `/api/user/${userId}/propriete/${prop.id}/uniteLocative/${unite.id}/locataire/${locataire.id}/contrat/${contrat.id}/etatdeslieux`,
@@ -232,17 +275,23 @@ export default function LocataireBoardPage() {
         );
         if (!etatRes.ok) {
           const errorData = await etatRes.json().catch(() => ({}));
-          console.error('Erreur de récupération de l\'état des lieux:', {
+          console.error("Erreur de récupération de l'état des lieux:", {
             status: etatRes.status,
             statusText: etatRes.statusText,
             url: etatRes.url,
-            error: errorData.message || 'Aucune information supplémentaire',
+            error: errorData.message || "Aucune information supplémentaire",
           });
-          throw new Error(errorData.message || `Erreur ${etatRes.status}: ${etatRes.statusText}`);
+          throw new Error(
+            errorData.message ||
+              `Erreur ${etatRes.status}: ${etatRes.statusText}`
+          );
         }
         const etatData = await etatRes.json();
         if (etatData?.length > 0 && etatData[0]?.details?.file) {
-          newDocuments.push({ type: 'État des lieux', url: etatData[0].details.file });
+          newDocuments.push({
+            type: "État des lieux",
+            url: etatData[0].details.file,
+          });
         }
 
         const avenantRes = await fetch(
@@ -251,35 +300,49 @@ export default function LocataireBoardPage() {
         );
         if (!avenantRes.ok) {
           const errorData = await avenantRes.json().catch(() => ({}));
-          console.error('Erreur de récupération de l\'avenant:', {
+          console.error("Erreur de récupération de l'avenant:", {
             status: avenantRes.status,
             statusText: avenantRes.statusText,
             url: avenantRes.url,
-            error: errorData.message || 'Aucune information supplémentaire',
+            error: errorData.message || "Aucune information supplémentaire",
           });
-          throw new Error(errorData.message || `Erreur ${avenantRes.status}: ${avenantRes.statusText}`);
+          throw new Error(
+            errorData.message ||
+              `Erreur ${avenantRes.status}: ${avenantRes.statusText}`
+          );
         }
         const avenantData = await avenantRes.json();
         if (avenantData?.length > 0 && avenantData[0]?.file) {
-          newDocuments.push({ type: 'Avenant', url: avenantData[0].file });
+          newDocuments.push({ type: "Avenant", url: avenantData[0].file });
         }
       }
 
-      if (locataire.carte_identite) newDocuments.push({ type: "Carte d'identité", url: locataire.carte_identite });
-      if (locataire.photo_identite) newDocuments.push({ type: "Photo d'identité", url: locataire.photo_identite });
+      if (locataire.carte_identite)
+        newDocuments.push({
+          type: "Carte d'identité",
+          url: locataire.carte_identite,
+        });
+      if (locataire.photo_identite)
+        newDocuments.push({
+          type: "Photo d'identité",
+          url: locataire.photo_identite,
+        });
 
       setDocuments(newDocuments);
       setOpenDocumentsDialog(true);
     } catch (error) {
-      console.error('Erreur lors de la récupération des documents:', error);
-      toast.error((error as Error).message || 'Erreur lors de la récupération des documents');
+      console.error("Erreur lors de la récupération des documents:", error);
+      toast.error(
+        (error as Error).message ||
+          "Erreur lors de la récupération des documents"
+      );
     } finally {
       setDocumentsLoading(false);
     }
   };
 
   const handleDownload = (url: string, type: string) => {
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = `${type}_${selectedLocataire?.nom}_${selectedLocataire?.prenom}`;
     document.body.appendChild(link);
@@ -289,6 +352,22 @@ export default function LocataireBoardPage() {
 
   const isImage = (url: string) => /\.(jpg|jpeg|png|gif)$/i.test(url);
   const isPDF = (url: string) => /\.pdf$/i.test(url);
+
+  if (userStats.gestionnaire?.statut === "EN_ATTENTE") {
+    return (
+      <Alert variant="destructive" className="max-w-2xl mx-auto mt-8">
+        <AlertCircleIcon
+          className="mr-4 h-4 w-4"
+          aria-label="Icône d'avertissement"
+        />
+        <AlertTitle>Compte en attente</AlertTitle>
+        <AlertDescription>
+          Votre compte est en attente de validation. Veuillez patienter pour sa
+          validation.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6">
@@ -317,7 +396,9 @@ export default function LocataireBoardPage() {
               className="flex justify-between items-center p-4 border rounded-lg shadow-sm"
             >
               <div>
-                <p className="font-semibold">{locataire.nom} {locataire.prenom}</p>
+                <p className="font-semibold">
+                  {locataire.nom} {locataire.prenom}
+                </p>
                 <p className="text-sm text-gray-600">{locataire.email}</p>
                 <p className="text-sm text-gray-600">{locataire.telephone}</p>
               </div>
@@ -347,7 +428,8 @@ export default function LocataireBoardPage() {
                     }}
                     disabled={documentsLoading}
                   >
-                    {documentsLoading && selectedLocataire?.id === locataire.id ? (
+                    {documentsLoading &&
+                    selectedLocataire?.id === locataire.id ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     ) : null}
                     Voir les documents
@@ -364,7 +446,7 @@ export default function LocataireBoardPage() {
           setOpenCreateDialog(false);
           fetchData();
         }}
-        userId={userId?.toString() ?? ''}
+        userId={userId?.toString() ?? ""}
         proprietes={proprietes}
       />
       {selectedLocataire && (
@@ -375,19 +457,25 @@ export default function LocataireBoardPage() {
             setSelectedLocataire(null);
             fetchData();
           }}
-          userId={userId?.toString() ?? ''}
+          userId={userId?.toString() ?? ""}
           proprietes={proprietes}
           locataire={selectedLocataire}
         />
       )}
-      <Dialog open={openDeleteDialog} onOpenChange={() => setOpenDeleteDialog(false)}>
+      <Dialog
+        open={openDeleteDialog}
+        onOpenChange={() => setOpenDeleteDialog(false)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
           </DialogHeader>
           <p>
-            Êtes-vous sûr de vouloir supprimer le locataire{' '}
-            <strong>{selectedLocataire?.nom} {selectedLocataire?.prenom}</strong> ?
+            Êtes-vous sûr de vouloir supprimer le locataire{" "}
+            <strong>
+              {selectedLocataire?.nom} {selectedLocataire?.prenom}
+            </strong>{" "}
+            ?
           </p>
           <DialogFooter>
             <Button
@@ -410,10 +498,13 @@ export default function LocataireBoardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={openDocumentsDialog} onOpenChange={() => {
-        setOpenDocumentsDialog(false);
-        setPreviewDocument(null);
-      }}>
+      <Dialog
+        open={openDocumentsDialog}
+        onOpenChange={() => {
+          setOpenDocumentsDialog(false);
+          setPreviewDocument(null);
+        }}
+      >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
@@ -450,13 +541,17 @@ export default function LocataireBoardPage() {
                   title={previewDocument.type}
                 />
               ) : (
-                <p className="text-gray-500">Prévisualisation non disponible pour ce type de fichier.</p>
+                <p className="text-gray-500">
+                  Prévisualisation non disponible pour ce type de fichier.
+                </p>
               )}
               <div className="flex justify-end">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDownload(previewDocument.url, previewDocument.type)}
+                  onClick={() =>
+                    handleDownload(previewDocument.url, previewDocument.type)
+                  }
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Télécharger
@@ -467,9 +562,12 @@ export default function LocataireBoardPage() {
             <p className="text-gray-500">Aucun document disponible.</p>
           ) : (
             <div className="space-y-2">
-              {documents.map((doc, index) => (
+              {documents.map((doc, index) =>
                 doc.url ? (
-                  <div key={index} className="flex justify-between items-center p-2 border rounded">
+                  <div
+                    key={index}
+                    className="flex justify-between items-center p-2 border rounded"
+                  >
                     <span>{doc.type}</span>
                     <div className="flex gap-2">
                       <Button
@@ -490,7 +588,7 @@ export default function LocataireBoardPage() {
                     </div>
                   </div>
                 ) : null
-              ))}
+              )}
             </div>
           )}
           <DialogFooter>

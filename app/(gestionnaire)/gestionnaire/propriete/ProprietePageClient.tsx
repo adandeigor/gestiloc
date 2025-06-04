@@ -13,11 +13,12 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { Table, TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui/table';
-import { ChevronDown } from 'lucide-react';
+import { AlertCircleIcon, ChevronDown } from 'lucide-react';
 import { UniteLocativeDialog } from '../components/UniteLocativeDialog';
 import getCookie from '@/core/getCookie';
 import { authHeader } from '@/core/auth-header';
 import { ProprieteType, UserStats, UniteLocativeType } from './type';   
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -38,13 +39,14 @@ export default function ProprietePage() {
   const [proprieteToDelete, setProprieteToDelete] = useState<ProprieteType | null>(null);
   const [confirmUniteDeleteOpen, setConfirmUniteDeleteOpen] = useState<boolean>(false);
   const [uniteToDelete, setUniteToDelete] = useState<{ unite: UniteLocativeType; index: number } | null>(null);
-
+  const [userStats, setUserStats] = useState<UserStats>({ gestionnaire: { id: 0, statut: 'EN_ATTENTE' }, proprietes: [] });
   // Charger les propriétés
   const fetchProprietes = async () => {
     setLoading(true);
     try {
       const stats: UserStats = await getUserStats();
       console.log('User stats:', stats);
+      setUserStats(stats);
       setProprietes(stats.proprietes || []);
       setUserId(stats.gestionnaire?.id ?? null);
     } catch (error) {
@@ -274,6 +276,18 @@ export default function ProprietePage() {
       </div>
     );
   }
+
+  if (userStats.gestionnaire?.statut === "EN_ATTENTE") {
+        return (
+          <Alert variant="destructive" className="max-w-2xl mx-auto mt-8">
+            <AlertCircleIcon className="mr-4 h-4 w-4" aria-label="Icône d'avertissement" />
+            <AlertTitle>Compte en attente</AlertTitle>
+            <AlertDescription>
+              Votre compte est en attente de validation. Veuillez patienter pour sa validation.
+            </AlertDescription>
+          </Alert>
+        );
+      }
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-2">
