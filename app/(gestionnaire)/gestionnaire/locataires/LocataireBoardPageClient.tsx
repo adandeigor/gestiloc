@@ -341,13 +341,24 @@ export default function LocataireBoardPage() {
     }
   };
 
-  const handleDownload = (url: string, type: string) => {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${type}_${selectedLocataire?.nom}_${selectedLocataire?.prenom}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Téléchargement robuste pour fichiers Supabase (blob)
+  const handleDownload = async (url: string, type: string) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Erreur lors du téléchargement du fichier");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${type}_${selectedLocataire?.nom}_${selectedLocataire?.prenom}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      toast.error("Erreur lors du téléchargement du fichier");
+      console.error(error);
+    }
   };
 
   const isImage = (url: string) => /\.(jpg|jpeg|png|gif)$/i.test(url);
