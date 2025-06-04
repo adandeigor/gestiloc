@@ -36,6 +36,7 @@ import getCookie from "@/core/getCookie";
 import LocatairesParProprieteChart from "../components/LocatairesParProprieteChart";
 import LocataireChart from "../components/chart";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { UserCompleteProfile } from "@/core/profile-completed";
 
 // Types définis
 type AuditLog = {
@@ -171,10 +172,13 @@ export default function DashboardClient() {
     setSelectedAuditIds(checked ? paginatedAuditLogs.map((log) => log.id) : []);
   };
 
+
   const handleDeleteAudits = async () => {
     if (selectedAuditIds.length === 0 || !jwt) return;
     setDeleteAuditLoader(true);
     try {
+      const completed = await UserCompleteProfile()
+      console.log("Profile completed:", completed ? "Oui" : "Non");
       const response = await fetch(
         `/api/user/${userStats.gestionnaire?.id}/auditlog`,
         {

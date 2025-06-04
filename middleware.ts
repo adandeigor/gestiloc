@@ -4,7 +4,11 @@ export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('jwt')?.value;
   const userId = request.cookies.get('userId')?.value;
-  console.log(`[Middleware] Requête pour ${pathname} | Token: ${token ? 'Présent' : 'Absent'} | UserId: ${userId ? 'Présent' : 'Absent'}`);
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[Middleware] Requête pour ${pathname} | Token: ${token ? 'Présent' : 'Absent'} | UserId: ${userId ? 'Présent' : 'Absent'}`);
+  }
+
   let loaderType =
     pathname.startsWith('/public') || pathname.startsWith('/auth') ? 'public' :
     pathname.startsWith('/admin') ? 'admin' :
@@ -22,7 +26,7 @@ export default async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Vérifier les cookies et le token pour les routes protégées
+  // Vérifier les cookies pour les routes protégées
   if (
     (pathname.startsWith('/gestionnaire') || pathname.startsWith('/complete-profile') || pathname.startsWith('/admin')) &&
     (!token || !userId)
@@ -32,10 +36,12 @@ export default async function middleware(request: NextRequest) {
     }
     response = NextResponse.redirect(new URL('/auth/login', request.url));
     response.headers.set('X-Loader-Type', 'public');
+    response.cookies.delete('jwt');
+    response.cookies.delete('userId');
     return response;
   }
 
-  // Vérification du profil complet (exemple)
+  // Vérification du profil complet pour /gestionnaire
   if (pathname.startsWith('/gestionnaire') && token && userId) {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile-complete/${userId}`, {
@@ -44,18 +50,54 @@ export default async function middleware(request: NextRequest) {
           "Authorization-JWT": `Bearer ${token}`,
         },
       });
-      console.log("response", res)
-      if (res.ok) {
-        const data = await res.json();
-        console.log("data", data)
-        if (!data.complete) {
-          
+
+      if (!res.ok) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(`[Middleware] Erreur API: ${res.status} ${res.statusText}`);
+        }
+        // Cas spécifique pour 404 : profil incomplet
+        if (res.status === 404) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Profil incomplet (404), redirection vers /complete-profile');
+          }
           return NextResponse.redirect(new URL('/complete-profile', request.url));
         }
+        // Autres erreurs (401, 500, etc.) : redirection vers /auth/login
+        response = NextResponse.redirect(new URL('/auth/login', request.url));
+        response.cookies.delete('jwt');
+        response.cookies.delete('userId');
+        return response;
+      }
+
+      const data = await res.json();
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('data', data.complete);
+      }
+
+      if (typeof data.complete !== 'boolean') {
+        console.error(`[Middleware] Réponse inattendue: ${JSON.stringify(data)}`);
+        response = NextResponse.redirect(new URL('/auth/login', request.url));
+        response.cookies.delete('jwt');
+        response.cookies.delete('userId');
+        return response;
+      }
+
+      if (data.complete === false) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Profil incomplet, redirection vers /complete-profile');
+        }
+        return NextResponse.redirect(new URL('/complete-profile', request.url));
+      }
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Profil complet, accès autorisé');
       }
     } catch (e) {
-      console.error(e);
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+      console.error(`[Middleware] Erreur lors de la vérification du profil: ${e}`);
+      response = NextResponse.redirect(new URL('/auth/login', request.url));
+      response.cookies.delete('jwt');
+      response.cookies.delete('userId');
+      return response;
     }
   }
 
