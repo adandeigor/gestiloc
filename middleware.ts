@@ -39,6 +39,8 @@ export default async function middleware(request: NextRequest) {
     return response;
   }
 
+  console.log("[Middleware] Vérification de l'authentification pour les routes protégées");
+
   // Protéger les routes /gestionnaire et /complete-profile contre les utilisateurs non connectés
   if ((pathname.startsWith('/gestionnaire') || pathname.startsWith('/complete-profile')) && (!token || !userId)) {
     console.log(`[Middleware] Accès non autorisé à ${pathname}, redirection vers /auth/login`);
@@ -48,7 +50,7 @@ export default async function middleware(request: NextRequest) {
     response.cookies.delete('userId');
     return response;
   }
-
+  console.log('[Middleware] Accès autorisé à la route protégée');
   // Vérifier la complétion du profil pour /gestionnaire et /complete-profile
   if ((pathname.startsWith('/gestionnaire') || pathname.startsWith('/complete-profile')) && token && userId) {
     try {
@@ -59,6 +61,7 @@ export default async function middleware(request: NextRequest) {
           "Authorization-JWT": `Bearer ${token}`,
         },
       });
+      console.log('[Middleware] Réponse de l\'API reçue', res);
 
       // Vérifier si la réponse est OK
       if (!res.ok) {

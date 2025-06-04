@@ -123,6 +123,7 @@ export default function DashboardClient() {
     );
   }
 
+  
   if (!userStats) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -130,6 +131,18 @@ export default function DashboardClient() {
           Impossible de charger les statistiques.
         </span>
       </div>
+    );
+  }
+
+  if (userStats?.gestionnaire?.statut === "EN_ATTENTE") {
+    return (
+      <Alert variant="destructive" className="max-w-2xl mx-auto mt-8">
+        <AlertCircleIcon className="mr-4 h-4 w-4" aria-label="Icône d'avertissement" />
+        <AlertTitle>Compte en attente</AlertTitle>
+        <AlertDescription>
+          Votre compte est en attente de validation. Veuillez patienter pour sa validation.
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -191,17 +204,6 @@ export default function DashboardClient() {
     }
   };
 
-  if (userStats.gestionnaire?.statut === "EN_ATTENTE") {
-    return (
-      <Alert variant="destructive" className="max-w-2xl mx-auto mt-8">
-        <AlertCircleIcon className="mr-4 h-4 w-4" aria-label="Icône d'avertissement" />
-        <AlertTitle>Compte en attente</AlertTitle>
-        <AlertDescription>
-          Votre compte est en attente de validation. Veuillez patienter pour sa validation.
-        </AlertDescription>
-      </Alert>
-    );
-  }
   return (
     <Suspense fallback={<div>Chargement du tableau de bord...</div>}>
       <div className="min-h-screen">
