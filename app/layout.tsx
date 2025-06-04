@@ -4,6 +4,8 @@ import "./globals.css";
 import "leaflet/dist/leaflet.css"; // Ajout des styles Leaflet
 import { Suspense } from "react";
 import { Montserrat, Lato } from "next/font/google";
+import { Analytics } from '@vercel/analytics/next';
+
 
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" });
 const lato = Lato({ subsets: ["latin"], variable: "--font-lato", weight: ["400", "700"] });
@@ -29,6 +31,7 @@ export default function RootLayout({
           }
         >
           {children}
+          <Analytics/>
           <Toaster duration={5000} position="top-right" />
         </Suspense>
       </body>
