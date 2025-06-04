@@ -7,6 +7,7 @@ import { getUserStats } from "../services/getUserStats";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircleIcon } from "lucide-react";
+import getCookie from "@/core/getCookie";
 
 // Interfaces TypeScript (basées sur les données fournies précédemment)
 interface Gestionnaire {
@@ -211,7 +212,7 @@ export default function Page() {
     const fetchData = async () => {
       try {
         // Vérifier si userId existe dans localStorage
-        const storedUserId = localStorage.getItem("userId");
+        const storedUserId = getCookie("userId");
         
         if (!storedUserId) {
           router.push("/auth/login");
