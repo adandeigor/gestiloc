@@ -3,6 +3,11 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import "leaflet/dist/leaflet.css"; // Ajout des styles Leaflet
 import { Suspense } from "react";
+import { Montserrat, Lato } from "next/font/google";
+
+const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" });
+const lato = Lato({ subsets: ["latin"], variable: "--font-lato", weight: ["400", "700"] });
+
 export const metadata: Metadata = {
   title: "Gestiloc",
   description: "Gérer vos locations en toute simplicité",
@@ -15,19 +20,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-      </head>
-      <body className="">
+      <body className={`${montserrat.variable} ${lato.variable}`}>
         <Suspense
           fallback={
             <div className="flex items-center justify-center h-screen">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-accent"></div>
+              <div className="animate-spin rounded-full h-16 w-16 border-2 border-accent border-b-transparent"></div>
             </div>
           }
         >
