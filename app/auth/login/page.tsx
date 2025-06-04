@@ -17,6 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner'; // ou ton système de toast
 import { useState } from 'react';
 import { useCustomRouter } from '@/core/useCustomRouter';
+import { loginUser } from '@/core/loginUser';
 
 const loginSchema = z.object({
   email: z.string().email('Adresse email invalide'),
@@ -42,44 +43,13 @@ const LoginForm: React.FC = () => {
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization : process.env.NEXT_PUBLIC_API_TOKEN as string
-         },
-        body: JSON.stringify({
-          email: data.email,
-          motDePasse: data.password,
-        }),
-      });
-      console.log('Response status:', response);
-      const result = await response.json();
-      console.log('Response data:', result);
-
-      if (!response.ok) {
-        // Gestion des erreurs de validation (champ par champ)
-        if (result.error && typeof result.error === 'object') {
-          const fieldErrors = Object.values(result.error)
-            .flat()
-            .join(', ');
-            setError(fieldErrors);
-          toast.error(fieldErrors || 'Erreur lors de la connexion');
-        } else if (typeof result.error === 'string') {
-          setError(result.error);
-          toast.error(result.error);
-        } else {
-          setError('Erreur lors de la connexion');
-          toast.error('Erreur lors de la connexion');
-        }
+      const result = await loginUser(data.email, data.password);
+      if (!result.success) {
+        setError(result.error || 'Erreur lors de la connexion');
+        toast.error(result.error || 'Erreur lors de la connexion');
         return;
       }
-
       // Succès
-      localStorage.setItem('jwt', result.token);
-      document.cookie = `userId=${result.user.id}; path=/;`;
-      document.cookie = `jwt=${result.token}; path=/;`;
-      console.log('Connexion réussie, redirection vers le dashboard', document.cookie);
       toast.success('Connexion réussie !');
       reset();
       router.push('/gestionnaire/dashboard');
