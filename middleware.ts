@@ -1,9 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server';
+import getCookie from './core/getCookie';
 
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get('jwt')?.value;
-  const userId = request.cookies.get('userId')?.value;
+  const token = getCookie('jwt')
+  const userId = getCookie('userId')
   console.log(`[Middleware] Requête: ${pathname} | Token: ${token} | UserId: ${userId}`);
 
   let loaderType =
@@ -39,7 +40,6 @@ export default async function middleware(request: NextRequest) {
         headers: {
           Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN || ''}`,
           "Authorization-JWT": `Bearer ${token}`,
-          'Cache-Control': 'no-cache',
         },
       });
 
