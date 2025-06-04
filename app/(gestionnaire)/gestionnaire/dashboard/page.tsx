@@ -227,6 +227,7 @@ export default function Page() {
         if(err instanceof Error){
           setError(err.message);
         }
+        toast.error('Veuillez vous reconnecter pour accéder à votre tableau de bord.')
         return router.push("/auth/login");
       } finally {
         setIsLoading(false);
