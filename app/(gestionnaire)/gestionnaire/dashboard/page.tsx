@@ -23,7 +23,6 @@ const DashboardClient = dynamic(() => import("./DashboardClient"), { ssr: false 
 
 export default function Page() {
   const router = useRouter();
-  const [userId, setUserId] = useState<string | null>(null);
   const [data, setData] = useState<UserStats | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +35,6 @@ export default function Page() {
         if (!storedUserId) {
           throw new Error("Utilisateur non authentifié. Veuillez vous reconnecter.");
         }
-        setUserId(storedUserId);
 
         // Récupérer les stats de l'utilisateur
         const result = await getUserStats();
@@ -87,7 +85,7 @@ export default function Page() {
         <AlertCircleIcon className="mr-4 h-4 w-4" aria-label="Icône d'avertissement" />
         <AlertTitle>Compte en attente</AlertTitle>
         <AlertDescription>
-          Votre compte est en attente de validation. Veuillez patienter jusqu'à ce qu'un administrateur active votre compte.
+          Votre compte est en attente de validation. Veuillez patienter pour que le compte soit activé.
         </AlertDescription>
       </Alert>
     );
