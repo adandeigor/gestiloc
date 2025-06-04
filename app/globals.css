@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 :root{
-  font-family: var(--font-montserrat), sans-serif;
+  font-family: var(--font-montserrat);
 }
 /* Couleur principale */
 .text-primary {
