@@ -31,6 +31,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCustomRouter } from '@/core/useCustomRouter';
 import { toast } from 'sonner';
 import  getCookie from '@/core/getCookie';
+import { httpClient } from '@/core/httpClient';
 
 export const SidebarNavigation = () => {
   const pathname = usePathname();
@@ -45,21 +46,10 @@ export const SidebarNavigation = () => {
   const logout = async () => {
     try {
       const userId = getCookie('userId');
-      const jwt = getCookie('jwt') as string;
       if (!userId) {
         throw new Error('No user ID found');
       }
-      const response = await fetch(`/api/user/${userId}/logout`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' ,
-          "Authorization-JWT": `Bearer ${jwt}`,
-          Authorization : process.env.NEXT_PUBLIC_API_TOKEN as string
-        },
-      });
-      if (!response.ok) {
-        throw new Error(response.statusText);
-      }
+       await httpClient.post(`/api/user/${userId}/logout`, null)
       deleteCookie('userId');
       deleteCookie('jwt');
       router.push('/auth/login');

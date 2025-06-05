@@ -1,6 +1,6 @@
-import { authHeader } from "@/core/auth-header";
 import getCookie from "@/core/getCookie";
 import { toast } from "sonner";
+import { httpClient } from "@/core/httpClient";
 
 const getUserStats = async () => {
     const userid = getCookie("userId");
@@ -10,23 +10,18 @@ const getUserStats = async () => {
         toast.error("Utilisateur non authentifié");
         return;
     }
-   const headers: Record<string, string> = {
-            "Content-Type": "application/json", 
-            ...authHeader(jwt as string)
-        };
-   Object.keys(headers).forEach(key => {
-       if (headers[key] === undefined) delete headers[key];
-   });
-   const response = await fetch(`/api/user/${userid}/stats`, {
-        method: "GET",
-        headers,
-    });
-
-    if (!response.ok) {
-        toast.error("Erreur lors de la récupération des statistiques de l'utilisateur");
+    try {
+        // Utilisation de httpClient.get
+        const data = await httpClient.get(`/api/user/${userid}/stats`);
+        return data;
+    } catch (error) {
+        toast.error(
+            error instanceof Error
+                ? error.message
+                : "Erreur lors de la récupération des statistiques de l'utilisateur"
+        );
+        return;
     }
-    const data = await response.json();
-    return data;    
 };
 
 export { getUserStats };

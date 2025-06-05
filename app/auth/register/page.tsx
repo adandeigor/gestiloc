@@ -22,8 +22,7 @@ import 'react-phone-number-input/style.css';
 import {  isValidPhoneNumber } from 'react-phone-number-input';
 import { toast } from 'sonner';
 import { useCustomRouter } from '@/core/useCustomRouter';
-import { authHeader } from '@/core/auth-header';
-import getCookie from '@/core/getCookie';
+import { httpClient } from '@/core/httpClient';
 
 const registerSchema = z
   .object({
@@ -95,51 +94,23 @@ const RegisterForm: React.FC = () => {
   const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
     setErrorMessage(null);
-    const jwt = getCookie('jwt') as string
     try {
-       const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        ...authHeader(jwt),
-      };
-      Object.keys(headers).forEach((key) => {
-        if (headers[key] === undefined) delete headers[key];
-      });
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          prenom: data.firstName,
-          nom: data.lastName,
-          email: data.email,
-          telephone: data.phone,
-          motDePasse: data.password,
-        }),
+      // Appel direct, httpClient.post lève une erreur si non 2xx
+      const result = await httpClient.post('/auth/register', {
+        nom: data.firstName,
+        prenom: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        motDePasse: data.password,
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        // Erreurs de validation (champ par champ)
-        if (result.error && typeof result.error === 'object') {
-          const fieldErrors = Object.values(result.error)
-            .flat()
-            .join(', ');
-          setErrorMessage(fieldErrors);
-          toast.error(fieldErrors || 'Erreur lors de l’inscription');
-        } else if (typeof result.error === 'string') {
-          setErrorMessage(result.error);
-          toast.error(result.error);
-        } else {
-          setErrorMessage('Erreur lors de l’inscription');
-          toast.error('Erreur lors de l’inscription');
-        }
-        return;
-      }
-
+      // Succès
+      console.log('Résultat de l’inscription:', result);
       reset();
       toast.success("Inscription réussie ! Vous pouvez maintenant vous connecter.");
       router.push('/auth/login');
     } catch (error) {
+      // Gestion des erreurs déjà normalisées par httpClient
       let message = 'Erreur lors de l’inscription';
       if (error instanceof Error) {
         if (error.message.includes('Failed to fetch')) {

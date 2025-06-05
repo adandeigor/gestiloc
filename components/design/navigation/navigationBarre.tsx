@@ -65,8 +65,8 @@ const NavigationBarre = ({ children }: NavigationBarreProps) => {
   return (
     <>
       <header className="bg-primary backdrop-blur-md text-white py-4 px-6 shadow-lg sticky top-0 z-50">
-        <div className="flex items-center justify-between  gap-4">
-          <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 mx-5">
             <button
               onClick={toggleSidebar}
               className="p-2 rounded-full hover:bg-white/10 transition-all duration-300"
@@ -77,7 +77,7 @@ const NavigationBarre = ({ children }: NavigationBarreProps) => {
             </button>
             <Link
               href="/"
-              className="text-4xl montserrat-bold tracking-tight hover:opacity-90 transition-opacity"
+              className="text-xl md:text-4xl montserrat-bold tracking-tight hover:opacity-90 transition-opacity"
             >
               Gestiloc
             </Link>

@@ -37,7 +37,8 @@ const LocatairesParProprieteChart = () => {
     const fetchStats = async () => {
       try {
         const stats = await getUserStats();
-        const proprietes = stats.proprietes || [];
+        // Type assertion to inform TypeScript about the expected structure
+        const proprietes = (stats as { proprietes?: unknown[] }).proprietes || [];
         interface Locataire {
           id: string;
           [key: string]: unknown;
@@ -56,7 +57,7 @@ const LocatairesParProprieteChart = () => {
 
 
         const labels: string[] = (proprietes as Propriete[]).map((p) => p.nom);
-        const data: number[] = proprietes.map((p: Propriete) => {
+        const data: number[] = (proprietes as Propriete[]).map((p: Propriete) => {
           // Compte le nombre de locataires uniques par propriété
           const locataires: Set<string> = new Set();
           (p.unitesLocatives || []).forEach((u: UniteLocative) => {

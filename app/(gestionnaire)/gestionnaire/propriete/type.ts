@@ -13,10 +13,19 @@ export const ProprieteSchemaValidator = z.object({
   }),
 });
 
-export type ProprieteType = z.infer<typeof ProprieteSchemaValidator> & {
+export type ProprieteType = {
   id: number;
+  nom: string;
+  adresse: string;
+  ville: string;
+  pays: string;
+  codePostal: string;
   createdAt: string;
   unitesLocatives?: UniteLocativeType[];
+  localisation?: {
+    latitude?: number;
+    longitude?: number;
+  };
 };
 
 // Type pour UniteLocative
@@ -28,6 +37,7 @@ export type UniteLocativeType = {
   _new?: boolean;
   _edit?: boolean;
   _showDesc?: boolean;
+  locataires?: object[];
 };
 
 // Type pour les statistiques utilisateur

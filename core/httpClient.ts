@@ -1,9 +1,4 @@
-// httpClient.ts
-
-import { isFormDataEndpoint } from "../core/apiEndpointConfig";
 import getCookie from "./getCookie";
-
-
 
 class HttpClient {
   private baseUrl: string = '';
@@ -16,36 +11,39 @@ class HttpClient {
   private async handleResponse(response: Response) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      // Prendre en compte le champ "error" retourné par l'API
+      const errorMsg =
+        errorData.error ||
+        errorData.message ||
+        'Une erreur s\'est produite';
       switch (response.status) {
         case 400:
-          throw new Error(errorData.message || 'Requête invalide');
+          throw new Error(errorMsg || 'Requête invalide');
         case 401:
-          throw new Error('Non autorisé');
+          throw new Error(errorMsg || 'Non autorisé');
         case 404:
-          throw new Error('Ressource non trouvée');
+          throw new Error(errorMsg || 'Ressource non trouvée');
         case 500:
-          throw new Error(errorData.message || 'Erreur serveur');
+          throw new Error(errorMsg || 'Erreur serveur');
         default:
-          throw new Error(errorData.message || 'Une erreur s\'est produite');
+          throw new Error(errorMsg);
       }
     }
+    console.log("error", response)
     return response.json();
   }
 
   // En-têtes communs
-  private getHeaders(isFormData: boolean = false) {
+  private getHeaders() {
     const headers = new Headers();
-    if (!isFormData) {
-      headers.append('Content-Type', 'application/json');
-    }
-    headers.append('Access-Control-Allow-Origin', '*');
+    headers.append('Content-Type', 'application/json');
     const token = getCookie('jwt');
     const api_token = process.env.NEXT_PUBLIC_API_TOKEN;
     if (token) {
-      headers.append('Authorization', `Bearer ${token}`);
+      headers.append('Authorization', `Bearer ${api_token}`);
     }
     if (api_token) {
-      headers.append('authorization-jwt', api_token);
+      headers.append('Authorization-JWT', token as string);
     }
     return headers;
   }
@@ -56,14 +54,14 @@ class HttpClient {
   }
 
   // Construction de l'URL
-  private buildUrl(endpoint: string, params?: Record<string, any>): URL {
+  private buildUrl(endpoint: string, params?: Record<string, string | number | boolean | undefined>): URL {
     const normalizedEndpoint = this.normalizeEndpoint(endpoint);
     const urlString = this.baseUrl ? `${this.baseUrl}${normalizedEndpoint}` : normalizedEndpoint;
     const url = new URL(urlString, this.baseUrl ? undefined : window.location.origin);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value) {
-          url.searchParams.append(key, value);
+        if (value !== undefined && value !== null && value !== false) {
+          url.searchParams.append(key, String(value));
         }
       });
     }
@@ -72,9 +70,12 @@ class HttpClient {
   }
 
   // GET
-  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+  async get<T>(endpoint: string, params?: Record<string, unknown>): Promise<T> {
     try {
-      const url = this.buildUrl(endpoint, params);
+      const url = this.buildUrl(
+        endpoint,
+        params as Record<string, string | number | boolean | undefined>
+      );
       const response = await fetch(url.toString(), {
         method: 'GET',
         headers: this.getHeaders(),
@@ -86,15 +87,13 @@ class HttpClient {
   }
 
   // POST
-  async post<T>(endpoint: string, body: any, forceFormData: boolean = false): Promise<T> {
+  async post<T>(endpoint: string, body: Record<string, unknown> | null | undefined): Promise<T> {
     try {
-      const normalizedEndpoint = this.normalizeEndpoint(endpoint);
-      const isFormData = forceFormData || isFormDataEndpoint(normalizedEndpoint);
       const url = this.buildUrl(endpoint);
       const response = await fetch(url.toString(), {
         method: 'POST',
-        headers: this.getHeaders(isFormData),
-        body: isFormData ? body : JSON.stringify(body),
+        headers: this.getHeaders(),
+        body: body ? JSON.stringify(body) : undefined,
       });
       return this.handleResponse(response);
     } catch (error) {
@@ -103,15 +102,13 @@ class HttpClient {
   }
 
   // PUT
-  async put<T>(endpoint: string, body: any, forceFormData: boolean = false): Promise<T> {
+  async put<T>(endpoint: string, body: Record<string, unknown> | null | undefined): Promise<T> {
     try {
-      const normalizedEndpoint = this.normalizeEndpoint(endpoint);
-      const isFormData = forceFormData || isFormDataEndpoint(normalizedEndpoint);
       const url = this.buildUrl(endpoint);
       const response = await fetch(url.toString(), {
         method: 'PUT',
-        headers: this.getHeaders(isFormData),
-        body: isFormData ? body : JSON.stringify(body),
+        headers: this.getHeaders(),
+        body: body ? JSON.stringify(body) : undefined,
       });
       return this.handleResponse(response);
     } catch (error) {

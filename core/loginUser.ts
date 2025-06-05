@@ -3,9 +3,15 @@
 
 import { cookies } from 'next/headers';
 
+export interface User {
+  id: string;
+  // Ajoutez d'autres propriétés utilisateur selon votre modèle
+  [key: string]: unknown;
+}
+
 export interface LoginResult {
   success: boolean;
-  user?: any;
+  user?: User;
   token?: string;
   error?: string;
 }

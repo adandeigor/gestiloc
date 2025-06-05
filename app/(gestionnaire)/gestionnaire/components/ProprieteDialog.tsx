@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import MapPicker from './MapPicker'; // Importer le composant MapPicker
-import getCookie from '@/core/getCookie';
+import { httpClient } from '@/core/httpClient';
 
 const ProprieteSchema = z.object({
   nom: z.string().min(1, "Le nom de la propriété est requis"),
@@ -61,11 +61,9 @@ export function ProprieteDialog({ open, onClose, userId, propriete }: ProprieteD
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [locationLoading, setLocationLoading] = useState<boolean>(false);
-  const [jwt, setJwt] = useState<string | null>(null);
 
   // Pré-remplir le formulaire si propriete (édition)
   useEffect(() => {
-    setJwt(getCookie("jwt") as string)
     if (open && propriete) {
       reset({
         nom: propriete.nom || '',
@@ -119,23 +117,15 @@ export function ProprieteDialog({ open, onClose, userId, propriete }: ProprieteD
   const onSubmit = async (data: ProprieteFormType): Promise<void> => {
     setLoading(true);
     try {
-      const url = propriete ? `/api/user/${userId}/propriete/${propriete.id}` : `/api/user/${userId}/propriete`;
-      const method = propriete ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 
-          'Content-Type': 'application/json',
-          "Authorization-JWT": `Bearer ${jwt}`,
-          Authorization : process.env.NEXT_PUBLIC_API_TOKEN as string
-         },
-        body: JSON.stringify(data),
-
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || (propriete ? 'Erreur lors de la modification' : 'Erreur lors de la création de la propriété'));
+      if (propriete) {
+        // Modification
+        await httpClient.put(`/api/user/${userId}/propriete/${propriete.id}`, data);
+        toast.success('Propriété modifiée avec succès !');
+      } else {
+        // Création
+        await httpClient.post(`/api/user/${userId}/propriete`, data);
+        toast.success('Propriété enregistrée avec succès !');
       }
-      toast.success(propriete ? 'Propriété modifiée avec succès !' : 'Propriété enregistrée avec succès !');
       onClose();
     } catch (e) {
       toast.error(

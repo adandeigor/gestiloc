@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import getCookie from '@/core/getCookie';
+import { httpClient } from '@/core/httpClient';
 
 const UniteLocativeSchema = z.object({
   nom: z.string().min(1, "Le nom de l'unité locative est requis"),
@@ -53,28 +54,22 @@ export function UniteLocativeDialog({ open, onClose, proprieteId, unite, onSaved
       reset({ nom: '', description: '', prix: 0 });
     }
   }, [open, unite, reset]);
-  const jwt = getCookie("jwt") as string;
   const onSubmit = async (data: UniteLocativeFormType) => {
     setSaving(true);
     try {
-      const url = unite
-        ? `/api/user/${userId}/propriete/${proprieteId}/uniteLocative/${unite.id}`
-        : `/api/user/${userId}/propriete/${proprieteId}/uniteLocative`;
-      const method = unite ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 
-          'Content-Type': 'application/json',
-          "Authorization-JWT": `Bearer ${jwt}`,
-          Authorization : process.env.NEXT_PUBLIC_API_TOKEN as string
-         },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || (unite ? 'Erreur lors de la modification' : 'Erreur lors de la création de l\'unité locative'));
+      if (unite) {
+        await httpClient.put(
+          `/api/user/${userId}/propriete/${proprieteId}/uniteLocative/${unite.id}`,
+          data
+        );
+        toast.success("Unité modifiée !");
+      } else {
+        await httpClient.post(
+          `/api/user/${userId}/propriete/${proprieteId}/uniteLocative`,
+          data
+        );
+        toast.success("Unité ajoutée !");
       }
-      toast.success(unite ? "Unité modifiée !" : "Unité ajoutée !");
       onSaved();
       onClose();
     } catch (e: unknown) {

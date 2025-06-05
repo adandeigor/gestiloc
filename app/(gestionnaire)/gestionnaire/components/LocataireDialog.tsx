@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { uploadToSupabase } from '@/core/uploadFIle';
 import { Loader2 } from 'lucide-react';
-import getCookie from '@/core/getCookie';
+import { httpClient } from '@/core/httpClient';
 
 interface Locataire {
   id: number;
@@ -79,7 +79,6 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
   const [unitOptions, setUnitOptions] = useState<UniteLocative[]>([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [formDataToSubmit, setFormDataToSubmit] = useState<LocataireFormType | null>(null);
-  const [jwt, setJwt] = useState<string | null>(null);
   const selectedProprieteId = watch('proprieteId');
   const selectedUniteLocativeId = watch('uniteLocativeId');
 
@@ -115,7 +114,6 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
   }, [selectedProprieteId, proprietes, setValue, locataire]);
 
   useEffect(() => {
-    setJwt(getCookie('jwt') as string);
     // Débogage : vérifier selectedUniteLocativeId et unitOptions
     console.log('selectedUniteLocativeId:', selectedUniteLocativeId);
     console.log('unitOptions:', unitOptions);
@@ -162,40 +160,23 @@ export function LocataireDialog({ open, onClose, userId, proprietes, locataire }
         ? `/api/user/${userId}/propriete/${data.proprieteId}/uniteLocative/${data.uniteLocativeId || locataire.uniteLocativeId}/locataire/${locataire.id}`
         : `/api/user/${userId}/propriete/${data.proprieteId}/uniteLocative/${data.uniteLocativeId}/locataire`;
 
-      const res = await fetch(url, {
-        method: locataire ? 'PUT' : 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          "Authorization-JWT": `Bearer ${jwt}`,
-            Authorization : process.env.NEXT_PUBLIC_API_TOKEN as string
-         },
-        body: JSON.stringify({
-          nom: data.nom,
-          prenom: data.prenom,
-          email: data.email,
-          telephone: data.telephone,
-          carte_identite: carteUrl,
-          photo_identite: photoUrl || undefined,
-          uniteLocativeId: data.uniteLocativeId || (locataire ? String(locataire.uniteLocativeId) : undefined),
-        }),
-      });
+      const body = {
+        nom: data.nom,
+        prenom: data.prenom,
+        email: data.email,
+        telephone: data.telephone,
+        carte_identite: carteUrl,
+        photo_identite: photoUrl || undefined,
+        uniteLocativeId: data.uniteLocativeId || (locataire ? String(locataire.uniteLocativeId) : undefined),
+      };
 
-      if (!res.ok) {
-        let errMsg = locataire ? 'Erreur lors de la mise à jour du locataire' : 'Erreur lors de la création du locataire';
-        try {
-          const err = await res.json();
-          if (err?.error) {
-            if (Array.isArray(err.error)) {
-                errMsg = (err.error as { message: string }[]).map((e: { message: string }) => e.message).join(' | ');
-            } else {
-              errMsg = err.error;
-            }
-          }
-        } catch {}
-        throw new Error(errMsg);
+      if (locataire) {
+        await httpClient.put(url, body);
+        toast.success('Locataire mis à jour avec succès !');
+      } else {
+        await httpClient.post(url, body);
+        toast.success('Locataire enregistré avec succès !');
       }
-
-      toast.success(locataire ? 'Locataire mis à jour avec succès !' : 'Locataire enregistré avec succès !');
       onClose();
       reset();
     } catch (e) {

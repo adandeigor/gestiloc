@@ -15,10 +15,10 @@ import {
 import { Table, TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui/table';
 import { AlertCircleIcon, ChevronDown } from 'lucide-react';
 import { UniteLocativeDialog } from '../components/UniteLocativeDialog';
-import getCookie from '@/core/getCookie';
-import { authHeader } from '@/core/auth-header';
 import { ProprieteType, UserStats, UniteLocativeType } from './type';   
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { httpClient } from '@/core/httpClient';
+import { AlertTriangle } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -44,7 +44,7 @@ export default function ProprietePage() {
   const fetchProprietes = async () => {
     setLoading(true);
     try {
-      const stats: UserStats = await getUserStats();
+      const stats: UserStats = (await getUserStats()) as UserStats;
       console.log('User stats:', stats);
       setUserStats(stats);
       setProprietes(stats.proprietes || []);
@@ -92,46 +92,25 @@ export default function ProprietePage() {
       setProprieteToDelete(null);
       return;
     }
-
-    const jwt = getCookie('jwt');
-    if (!jwt) {
-      toast.error('Session non valide. Veuillez vous reconnecter.');
+    // Vérification côté client si la propriété contient des unités locatives
+    if (Array.isArray(proprieteToDelete.unitesLocatives) && proprieteToDelete.unitesLocatives.length > 0) {
+      toast.error('Cette propriété ne peut pas être supprimée car elle contient des unités locatives.');
       setConfirmDeleteOpen(false);
       setProprieteToDelete(null);
       return;
     }
-
     setIsDeleting(true);
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...authHeader(jwt),
-      };
-      Object.keys(headers).forEach((key) => {
-        if (headers[key] === undefined) delete headers[key];
-      });
-
-      const res = await fetch(`/api/user/${userId}/propriete/${proprieteToDelete.id}`, {
-        method: 'DELETE',
-        headers,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Erreur de suppression de la propriété:', {
-          status: res.status,
-          statusText: res.statusText,
-          url: res.url,
-          error: errorData.message || 'Aucune information supplémentaire',
-        });
-        throw new Error(errorData.message || `Erreur ${res.status}: ${res.statusText}`);
-      }
-
+      await httpClient.delete(`/api/user/${userId}/propriete/${proprieteToDelete.id}`);
       toast.success('Propriété supprimée');
       await fetchProprietes();
     } catch (error) {
-      console.error('Erreur lors de la suppression de la propriété:', error);
-      toast.error((error as Error).message || 'Erreur lors de la suppression de la propriété');
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        toast.error('Erreur de connexion. Veuillez vérifier votre connexion internet.');
+      } else {
+        console.error('Erreur lors de la suppression de la propriété:', error);
+        toast.error((error as Error).message || 'Erreur lors de la suppression de la propriété');
+      }
     } finally {
       setIsDeleting(false);
       setConfirmDeleteOpen(false);
@@ -145,41 +124,16 @@ export default function ProprietePage() {
       toast.error('Utilisateur non valide');
       return;
     }
-
     setUniteDialogPropriete(propriete);
     setLoadingUnites(true);
     try {
-      const jwt = getCookie('jwt');
-      if (!jwt) {
-        throw new Error('Session non valide');
-      }
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...authHeader(jwt),
-      };
-      Object.keys(headers).forEach((key) => {
-        if (headers[key] === undefined) delete headers[key];
-      });
-
-      const res = await fetch(`/api/user/${userId}/propriete/${propriete.id}/uniteLocative`, {
-        headers,
-        method: 'GET',
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Erreur de chargement des unités:', {
-          status: res.status,
-          statusText: res.statusText,
-          url: res.url,
-          error: errorData.message || 'Aucune information supplémentaire',
-        });
-        throw new Error(errorData.message || `Erreur ${res.status}: ${res.statusText}`);
-      }
-
-      const data = await res.json();
-      const unites = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+      const data = await httpClient.get(`/api/user/${userId}/propriete/${propriete.id}/uniteLocative`);
+      const unites =
+        typeof data === 'object' && data !== null && 'data' in data && Array.isArray((data as { data: UniteLocativeType[] }).data)
+          ? (data as { data: UniteLocativeType[] }).data
+          : Array.isArray(data)
+          ? (data as UniteLocativeType[])
+          : [];
       setUnites(unites);
       console.log('Unités locatives:', unites);
     } catch (error) {
@@ -197,6 +151,11 @@ export default function ProprietePage() {
     setConfirmUniteDeleteOpen(true);
   };
 
+  // Vérifie si une unité locative a un locataire associé
+  const hasLocataire = (unite: UniteLocativeType) => {
+    return Array.isArray(unite.locataires) && unite.locataires.length > 0;
+  };
+
   // Confirmer la suppression d'une unité locative
   const confirmDeleteUnite = async () => {
     if (!uniteToDelete || !uniteDialogPropriete || !userId) {
@@ -205,53 +164,25 @@ export default function ProprietePage() {
       setUniteToDelete(null);
       return;
     }
-
+    // Blocage si un locataire est associé
+    if (hasLocataire(uniteToDelete.unite)) {
+      toast.error("Veuillez d'abord supprimer le locataire associé à cette unité locative.");
+      setConfirmUniteDeleteOpen(false);
+      setUniteToDelete(null);
+      return;
+    }
     const { unite, index } = uniteToDelete;
-
     if (!unite.id) {
       setUnites((prev) => prev.filter((_, i) => i !== index));
       setConfirmUniteDeleteOpen(false);
       setUniteToDelete(null);
       return;
     }
-
-    const jwt = getCookie('jwt');
-    if (!jwt) {
-      toast.error('Session non valide. Veuillez vous reconnecter.');
-      setConfirmUniteDeleteOpen(false);
-      setUniteToDelete(null);
-      return;
-    }
-
     setIsDeleting(true);
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...authHeader(jwt),
-      };
-      Object.keys(headers).forEach((key) => {
-        if (headers[key] === undefined) delete headers[key];
-      });
-
-      const res = await fetch(
-        `/api/user/${userId}/propriete/${uniteDialogPropriete.id}/uniteLocative/${unite.id}`,
-        {
-          method: 'DELETE',
-          headers,
-        }
+      await httpClient.delete(
+        `/api/user/${userId}/propriete/${uniteDialogPropriete.id}/uniteLocative/${unite.id}`
       );
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Erreur de suppression de l\'unité:', {
-          status: res.status,
-          statusText: res.statusText,
-          url: res.url,
-          error: errorData.message || 'Aucune information supplémentaire',
-        });
-        throw new Error(errorData.message || `Erreur ${res.status}: ${res.statusText}`);
-      }
-
       toast.success('Unité supprimée');
       setUnites((prev) => prev.filter((_, i) => i !== index));
     } catch (error) {
@@ -292,7 +223,7 @@ export default function ProprietePage() {
   return (
     <div className="max-w-5xl mx-auto py-8 px-2">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Mes propriétés</h1>
+        <h1 className="text-lg md:text-2xl font-bold">Mes propriétés</h1>
         <Button onClick={() => setOpenDialog(true)}>Ajouter une propriété</Button>
       </div>
       <div className="overflow-x-auto">
@@ -542,36 +473,16 @@ export default function ProprietePage() {
                     onSaved={async () => {
                       setLoadingUnites(true);
                       try {
-                        const jwt = getCookie('jwt');
-                        if (!jwt) {
-                          throw new Error('Session non valide');
-                        }
-                        const headers: Record<string, string> = {
-                          'Content-Type': 'application/json',
-                          ...authHeader(jwt),
-                        };
-                        Object.keys(headers).forEach((key) => {
-                          if (headers[key] === undefined) delete headers[key];
-                        });
-                        const res = await fetch(
-                          `/api/user/${userId}/propriete/${uniteDialogPropriete.id}/uniteLocative`,
-                          {
-                            method: 'GET',
-                            headers,
-                          }
+                        const data = await httpClient.get(
+                          `/api/user/${userId}/propriete/${uniteDialogPropriete.id}/uniteLocative`
                         );
-                        if (!res.ok) {
-                          const errorData = await res.json().catch(() => ({}));
-                          console.error('Erreur de rafraîchissement des unités:', {
-                            status: res.status,
-                            statusText: res.statusText,
-                            url: res.url,
-                            error: errorData.message || 'Aucune information supplémentaire',
-                          });
-                          throw new Error(errorData.message || `Erreur ${res.status}: ${res.statusText}`);
-                        }
-                        const data = await res.json();
-                        const unites = Array.isArray(data?.data) ? data.data : [];
+                        const unites =
+                          typeof data === 'object' &&
+                          data !== null &&
+                          'data' in data &&
+                          Array.isArray((data as { data: unknown }).data)
+                            ? (data as { data: UniteLocativeType[] }).data
+                            : [];
                         setUnites(unites);
                       } catch (error) {
                         console.error('Erreur lors du rafraîchissement des unités:', error);
@@ -599,16 +510,36 @@ export default function ProprietePage() {
         />
       )}
       {uniteToDelete && (
-        <ConfirmDeleteDialog
-          open={confirmUniteDeleteOpen}
-          onClose={() => {
-            setConfirmUniteDeleteOpen(false);
-            setUniteToDelete(null);
-          }}
-          onConfirm={confirmDeleteUnite}
-          loading={isDeleting}
-          proprieteNom={`l'unité locative "${uniteToDelete.unite.nom}"`}
-        />
+        hasLocataire(uniteToDelete.unite) ? (
+          // Dialog bloquant si un locataire est associé
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full border border-red-200 flex flex-col items-center">
+              <AlertTriangle className="text-red-500 mb-2" size={40} />
+              <h2 className="text-lg font-bold mb-2 text-red-700">Suppression impossible</h2>
+              <p className="text-gray-700 text-center mb-4">
+                Vous devez d&apos;abord supprimer le locataire associé à cette unité locative
+                <span className="font-semibold"> &quot;{uniteToDelete.unite.nom}&quot; </span> avant de pouvoir la supprimer.
+              </p>
+              <Button variant="outline" onClick={() => {
+                setConfirmUniteDeleteOpen(false);
+                setUniteToDelete(null);
+              }}>
+                Fermer
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <ConfirmDeleteDialog
+            open={confirmUniteDeleteOpen}
+            onClose={() => {
+              setConfirmUniteDeleteOpen(false);
+              setUniteToDelete(null);
+            }}
+            onConfirm={confirmDeleteUnite}
+            loading={isDeleting}
+            proprieteNom={`l'unité locative "${uniteToDelete.unite.nom}"`}
+          />
+        )
       )}
     </div>
   );

@@ -27,8 +27,8 @@ import { getUserStats } from "../services/getUserStats";
 import { LocataireDialog } from "../components/LocataireDialog";
 import getCookie from "@/core/getCookie";
 import Image from "next/image";
-import { authHeader } from "@/core/auth-header";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { httpClient } from "@/core/httpClient";
 
 interface Locataire {
   id: number;
@@ -85,11 +85,11 @@ export default function LocataireBoardPage() {
     setLoading(true);
     try {
       const stats = await getUserStats();
-      setUserStats(stats);
-      const locatairesList = stats.locataires || [];
+      setUserStats(stats as { gestionnaire?: { statut: string } });
+      const locatairesList = (stats as { locataires?: Locataire[] }).locataires || [];
       setLocataires(locatairesList);
       setFilteredLocataires(locatairesList);
-      setProprietes(stats.proprietes || []);
+      setProprietes((stats as { proprietes?: Propriete[] }).proprietes || []);
       console.log("Locataires chargés:", locatairesList);
     } catch (error) {
       console.error("Erreur lors du chargement des locataires:", error);
@@ -136,15 +136,6 @@ export default function LocataireBoardPage() {
       setSelectedLocataire(null);
       return;
     }
-
-    const jwt = getCookie("jwt");
-    if (!jwt) {
-      toast.error("Session non valide. Veuillez vous reconnecter.");
-      setOpenDeleteDialog(false);
-      setSelectedLocataire(null);
-      return;
-    }
-
     setActionLoading(true);
     try {
       const prop = proprietes.find((p) =>
@@ -158,34 +149,8 @@ export default function LocataireBoardPage() {
       if (!prop || !unite) {
         throw new Error("Propriété ou unité locative non trouvée");
       }
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        ...authHeader(jwt),
-      };
-      Object.keys(headers).forEach((key) => {
-        if (headers[key] === undefined) delete headers[key];
-      });
-
       const url = `/api/user/${userId}/propriete/${prop.id}/uniteLocative/${unite.id}/locataire/${selectedLocataire.id}`;
-      const res = await fetch(url, {
-        method: "DELETE",
-        headers,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Erreur de suppression du locataire:", {
-          status: res.status,
-          statusText: res.statusText,
-          url: res.url,
-          error: errorData.message || "Aucune information supplémentaire",
-        });
-        throw new Error(
-          errorData.message || `Erreur ${res.status}: ${res.statusText}`
-        );
-      }
-
+      await httpClient.delete(url);
       toast.success("Locataire supprimé avec succès !");
       setOpenDeleteDialog(false);
       setSelectedLocataire(null);
@@ -208,23 +173,7 @@ export default function LocataireBoardPage() {
       setDocumentsLoading(false);
       return;
     }
-
-    const jwt = getCookie("jwt");
-    if (!jwt) {
-      toast.error("Session non valide. Veuillez vous reconnecter.");
-      setDocumentsLoading(false);
-      return;
-    }
-
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        ...authHeader(jwt),
-      };
-      Object.keys(headers).forEach((key) => {
-        if (headers[key] === undefined) delete headers[key];
-      });
-
       const prop = proprietes.find((p) =>
         p.unitesLocatives.some((u) => u.id === locataire.uniteLocativeId)
       );
@@ -235,33 +184,18 @@ export default function LocataireBoardPage() {
         throw new Error("Propriété ou unité locative non trouvée");
       }
 
-      const contratRes = await fetch(
-        `/api/user/${userId}/propriete/${prop.id}/uniteLocative/${unite.id}/locataire/${locataire.id}/contrat`,
-        { headers }
+      const contratData = await httpClient.get(
+        `/api/user/${userId}/propriete/${prop.id}/uniteLocative/${unite.id}/locataire/${locataire.id}/contrat`
       );
-      if (!contratRes.ok) {
-        const errorData = await contratRes.json().catch(() => ({}));
-        console.error("Erreur de récupération des contrats:", {
-          status: contratRes.status,
-          statusText: contratRes.statusText,
-          url: contratRes.url,
-          error: errorData.message || "Aucune information supplémentaire",
-        });
-        throw new Error(
-          errorData.message ||
-            `Erreur ${contratRes.status}: ${contratRes.statusText}`
-        );
-      }
-
-      const contratData = await contratRes.json();
       interface Contrat {
         id: number;
         locataireId: number;
         url?: string;
       }
-      const contrats: Contrat[] = (contratData?.filter(
+      const contratsArray = Array.isArray(contratData) ? contratData : [];
+      const contrats: Contrat[] = contratsArray.filter(
         (c: { locataireId: number }) => c.locataireId === locataire.id
-      ) || []) as Contrat[];
+      ) as Contrat[];
       const newDocuments: Document[] = [];
 
       if (contrats.length > 0) {
@@ -269,50 +203,20 @@ export default function LocataireBoardPage() {
         if (contrat.url)
           newDocuments.push({ type: "Contrat", url: contrat.url });
 
-        const etatRes = await fetch(
-          `/api/user/${userId}/propriete/${prop.id}/uniteLocative/${unite.id}/locataire/${locataire.id}/contrat/${contrat.id}/etatdeslieux`,
-          { headers }
+        const etatData = await httpClient.get(
+          `/api/user/${userId}/propriete/${prop.id}/uniteLocative/${unite.id}/locataire/${locataire.id}/contrat/${contrat.id}/etatdeslieux`
         );
-        if (!etatRes.ok) {
-          const errorData = await etatRes.json().catch(() => ({}));
-          console.error("Erreur de récupération de l'état des lieux:", {
-            status: etatRes.status,
-            statusText: etatRes.statusText,
-            url: etatRes.url,
-            error: errorData.message || "Aucune information supplémentaire",
-          });
-          throw new Error(
-            errorData.message ||
-              `Erreur ${etatRes.status}: ${etatRes.statusText}`
-          );
-        }
-        const etatData = await etatRes.json();
-        if (etatData?.length > 0 && etatData[0]?.details?.file) {
+        if (Array.isArray(etatData) && etatData.length > 0 && etatData[0]?.details?.file) {
           newDocuments.push({
             type: "État des lieux",
             url: etatData[0].details.file,
           });
         }
 
-        const avenantRes = await fetch(
-          `/api/user/${userId}/propriete/${prop.id}/uniteLocative/${unite.id}/locataire/${locataire.id}/contrat/${contrat.id}/avenant`,
-          { headers }
+        const avenantData = await httpClient.get(
+          `/api/user/${userId}/propriete/${prop.id}/uniteLocative/${unite.id}/locataire/${locataire.id}/contrat/${contrat.id}/avenant`
         );
-        if (!avenantRes.ok) {
-          const errorData = await avenantRes.json().catch(() => ({}));
-          console.error("Erreur de récupération de l'avenant:", {
-            status: avenantRes.status,
-            statusText: avenantRes.statusText,
-            url: avenantRes.url,
-            error: errorData.message || "Aucune information supplémentaire",
-          });
-          throw new Error(
-            errorData.message ||
-              `Erreur ${avenantRes.status}: ${avenantRes.statusText}`
-          );
-        }
-        const avenantData = await avenantRes.json();
-        if (avenantData?.length > 0 && avenantData[0]?.file) {
+        if (Array.isArray(avenantData) && avenantData.length > 0 && avenantData[0]?.file) {
           newDocuments.push({ type: "Avenant", url: avenantData[0].file });
         }
       }
@@ -401,54 +305,75 @@ export default function LocataireBoardPage() {
         <p className="text-center text-gray-500">Aucun locataire trouvé.</p>
       ) : (
         <div className="space-y-4">
-          {filteredLocataires.map((locataire) => (
-            <div
-              key={locataire.id}
-              className="flex justify-between items-center p-4 border rounded-lg shadow-sm"
-            >
-              <div>
-                <p className="font-semibold">
-                  {locataire.nom} {locataire.prenom}
-                </p>
-                <p className="text-sm text-gray-600">{locataire.email}</p>
-                <p className="text-sm text-gray-600">{locataire.telephone}</p>
+          {filteredLocataires.map((locataire) => {
+            // Trouver l'unité locative et la propriété associée
+            const uniteLocative = proprietes
+              .flatMap((p) => p.unitesLocatives)
+              .find((u) => u.id === locataire.uniteLocativeId);
+            const propriete = proprietes.find((p) =>
+              p.unitesLocatives.some((u) => u.id === locataire.uniteLocativeId)
+            );
+            return (
+              <div
+                key={locataire.id}
+                className="flex justify-between items-center p-4 border rounded-lg shadow-sm"
+              >
+                <div>
+                  <p className="font-semibold">
+                    {locataire.nom} {locataire.prenom}
+                  </p>
+                  <p className="text-sm text-gray-600">{locataire.email}</p>
+                  <p className="text-sm text-gray-600">{locataire.telephone}</p>
+                  {/* Affichage de l'unité locative et de la propriété */}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Unité locative :{" "}
+                    <span className="font-medium">
+                      {uniteLocative?.nom || "Non trouvée"}
+                    </span>
+                    {"  |  "}
+                    Propriété :{" "}
+                    <span className="font-medium">
+                      {propriete?.nom || "Non trouvée"}
+                    </span>
+                  </p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEdit(locataire)}>
+                      Modifier
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedLocataire(locataire);
+                        setOpenDeleteDialog(true);
+                      }}
+                      className="text-red-600"
+                    >
+                      Supprimer
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedLocataire(locataire);
+                        fetchDocuments(locataire);
+                      }}
+                      disabled={documentsLoading}
+                    >
+                      {documentsLoading &&
+                      selectedLocataire?.id === locataire.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : null}
+                      Voir les documents
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleEdit(locataire)}>
-                    Modifier
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSelectedLocataire(locataire);
-                      setOpenDeleteDialog(true);
-                    }}
-                    className="text-red-600"
-                  >
-                    Supprimer
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSelectedLocataire(locataire);
-                      fetchDocuments(locataire);
-                    }}
-                    disabled={documentsLoading}
-                  >
-                    {documentsLoading &&
-                    selectedLocataire?.id === locataire.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : null}
-                    Voir les documents
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       <LocataireDialog
