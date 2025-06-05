@@ -374,13 +374,7 @@ export default function CompleteProfilePage() {
   const submitPersonalData = async (data: FormData) => {
     try {
       setIsLoading(true);
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        ...authHeader(jwt),
-      };
-      Object.keys(headers).forEach((key) => {
-        if (headers[key] === undefined) delete headers[key];
-      });
+    
 
       // Validate files
       if (!validateFile(data.ifu_file, "Fichier IFU")) {
@@ -434,7 +428,11 @@ export default function CompleteProfilePage() {
 
       const response = await fetch(`/api/user/${userId}/profile`, {
         method: "POST",
-        headers,
+        headers:{
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN }`,
+        "Authorization-JWT" : `Bearer ${jwt}`,
+        },
         body: JSON.stringify(personalData),
       });
 
@@ -464,19 +462,8 @@ export default function CompleteProfilePage() {
 
   const submitCompanyData = async (data: FormData) => {
     try {
-      setIsLoading(true);
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        ...authHeader(jwt),
-      };
-      Object.keys(headers).forEach((key) => {
-        if (headers[key] === undefined) delete headers[key];
-      });
-      const userId = getCookie("userId");
-      if (!userId) {
-        throw new Error("Identifiant utilisateur non trouvé dans les cookies.");
-      }
-
+      const userId = getCookie('userId')
+      
       // Validate registre_commerce if provided
       let uploading_registre_commerce = null;
       if (data.registre_commerce_file) {
@@ -491,7 +478,7 @@ export default function CompleteProfilePage() {
         uploading_registre_commerce = await uploadToSupabase(
           convertedRegistreCommerce,
           "registre_commerce",
-          userId
+          userId as string
         );
       }
 
@@ -510,7 +497,11 @@ export default function CompleteProfilePage() {
 
       const response = await fetch(`/api/user/${userId}/company`, {
         method: "POST",
-        headers,
+        headers:{
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN }`,
+        "Authorization-JWT" : `Bearer ${jwt}`,
+        },
         body: JSON.stringify(companyData),
       });
 
