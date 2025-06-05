@@ -22,7 +22,6 @@ import getCookie from "@/core/getCookie";
 import { uploadToSupabase } from "@/core/uploadFIle";
 import { convertImageToPDF } from "@/utils/imageToPdf";
 import { useCustomRouter } from "@/core/useCustomRouter";
-import { authHeader } from "@/core/auth-header";
 
 // Define Profile Validator (Step 1)
 const ProfileValidator = z.object({
