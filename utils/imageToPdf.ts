@@ -3,10 +3,8 @@
 import sharp from 'sharp';
 import PDFDocument from 'pdfkit';
 import { Writable } from 'stream';
-import fetch from 'node-fetch';
-
-// Cache global pour le buffer de la police
-let fontBufferCache: Buffer | null = null;
+import path from 'path';
+import fs from 'fs';
 
 export async function convertImageToPDF(file: File): Promise<{ data: { file: File, path: string } | null; error: string | null }> {
   try {
@@ -14,13 +12,16 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
       return { data: null, error: 'Aucune image fournie' };
     }
 
+    // Vérifier le type de fichier
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     if (!validTypes.includes(file.type)) {
       return { data: null, error: 'Le fichier doit être au format JPG, JPEG ou PNG' };
     }
 
+    // Convertir le fichier en buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    // Vérifier les métadonnées de l'image
     let metadata;
     try {
       metadata = await sharp(buffer).metadata();
@@ -28,24 +29,10 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
       console.error('Erreur lors de la lecture des métadonnées avec sharp :', sharpError);
       return { data: null, error: 'Erreur lors de la lecture de l\'image' };
     }
-    const width = metadata.width || 595;
+    const width = metadata.width || 595; // A4 par défaut
     const height = metadata.height || 842;
 
-    // Charger la police depuis le cache ou Supabase
-    if (!fontBufferCache) {
-      const fontUrl = 'https://gwsosglvvobbfayijeri.supabase.co/storage/v1/object/public/gestionnaire/fonts/open-sans.ttf';
-      try {
-        const fontResponse = await fetch(fontUrl);
-        if (!fontResponse.ok) {
-          throw new Error(`Erreur lors du téléchargement de la police : ${fontResponse.status} ${fontResponse.statusText}`);
-        }
-        fontBufferCache = await fontResponse.buffer();
-      } catch (fontError) {
-        console.error(`Erreur lors du téléchargement de la police depuis Supabase : ${fontError}`);
-        return { data: null, error: 'Erreur lors du chargement de la police' };
-      }
-    }
-
+    // Créer un buffer pour collecter les données du PDF
     const chunks: Buffer[] = [];
     const writableStream = new Writable({
       write(chunk, encoding, callback) {
@@ -54,18 +41,27 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
       },
     });
 
-    const doc = new PDFDocument({
-      size: [width, height],
-    });
-    doc.registerFont('open-sans', fontBufferCache);
-    doc.font('open-sans');
+    const res = await fetch("https://gwsosglvvobbfayijeri.supabase.co/storage/v1/object/public/gestionnaire/fonts/open-sans.ttf");
+    const fontBuffer = Buffer.from(await res.arrayBuffer());
+    const tempFontPath = path.resolve('/tmp/open-sans.ttf');
+    fs.writeFileSync(tempFontPath, fontBuffer);
 
+    // Créer le PDF
+    // Juste après avoir créé le doc
+    const doc = new PDFDocument({ size: [width, height], font: tempFontPath });
+
+    doc.registerFont('OpenSans', tempFontPath);
+    doc.font('OpenSans');
+
+
+    // Gérer les erreurs du flux
     writableStream.on('error', (streamError) => {
       console.error('Erreur dans le flux d\'écriture :', streamError);
     });
 
     doc.pipe(writableStream);
 
+    // Ajouter l'image au PDF
     try {
       doc.image(buffer, 0, 0, { width, height });
     } catch (imageError) {
@@ -75,6 +71,7 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
 
     doc.end();
 
+    // Attendre que le PDF soit généré
     await new Promise((resolve, reject) => {
       writableStream.on('finish', resolve);
       writableStream.on('error', reject);
@@ -84,7 +81,8 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
     const fileName = `converted_${Date.now()}.pdf`;
     const pdfFile = new File([pdfBuffer], fileName, { type: 'application/pdf' });
 
-    console.log('PDF généré avec succès :', fileName);
+
+    console.log('PDF généré avec succès :', fileName)
     console.log('le fichier PDF est de taille :', pdfBuffer.length, 'octets');
     return { data: { file: pdfFile, path: fileName }, error: null };
   } catch (error) {
@@ -92,3 +90,4 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
     return { data: null, error: `Erreur lors de la conversion en PDF : ${(error as Error).message}` };
   }
 }
+
