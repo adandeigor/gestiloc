@@ -12,16 +12,13 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
       return { data: null, error: 'Aucune image fournie' };
     }
 
-    // Vérifier le type de fichier
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     if (!validTypes.includes(file.type)) {
       return { data: null, error: 'Le fichier doit être au format JPG, JPEG ou PNG' };
     }
 
-    // Convertir le fichier en buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Vérifier les métadonnées de l'image
     let metadata;
     try {
       metadata = await sharp(buffer).metadata();
@@ -29,10 +26,9 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
       console.error('Erreur lors de la lecture des métadonnées avec sharp :', sharpError);
       return { data: null, error: 'Erreur lors de la lecture de l\'image' };
     }
-    const width = metadata.width || 595; // A4 par défaut
+    const width = metadata.width || 595;
     const height = metadata.height || 842;
 
-    // Créer un buffer pour collecter les données du PDF
     const chunks: Buffer[] = [];
     const writableStream = new Writable({
       write(chunk, encoding, callback) {
@@ -41,17 +37,22 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
       },
     });
 
-    // Créer le PDF
-    const doc = new PDFDocument({ size: [width, height], font: `${process.cwd()}/public/fonts/open-sans.ttf` });
-    
-    // Gérer les erreurs du flux
+    const fontPath = path.join(process.cwd(), 'public', 'fonts', 'open-sans.ttf');
+    if (!fs.existsSync(fontPath)) {
+      console.warn(`Police non trouvée à ${fontPath}, utilisation de Helvetica`);
+    }
+
+    const doc = new PDFDocument({
+      size: [width, height],
+      font: fs.existsSync(fontPath) ? fontPath : 'Helvetica',
+    });
+
     writableStream.on('error', (streamError) => {
       console.error('Erreur dans le flux d\'écriture :', streamError);
     });
 
     doc.pipe(writableStream);
 
-    // Ajouter l'image au PDF
     try {
       doc.image(buffer, 0, 0, { width, height });
     } catch (imageError) {
@@ -61,7 +62,6 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
 
     doc.end();
 
-    // Attendre que le PDF soit généré
     await new Promise((resolve, reject) => {
       writableStream.on('finish', resolve);
       writableStream.on('error', reject);
@@ -71,8 +71,7 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
     const fileName = `converted_${Date.now()}.pdf`;
     const pdfFile = new File([pdfBuffer], fileName, { type: 'application/pdf' });
 
-
-    console.log('PDF généré avec succès :', fileName)
+    console.log('PDF généré avec succès :', fileName);
     console.log('le fichier PDF est de taille :', pdfBuffer.length, 'octets');
     return { data: { file: pdfFile, path: fileName }, error: null };
   } catch (error) {
@@ -80,4 +79,3 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
     return { data: null, error: `Erreur lors de la conversion en PDF : ${(error as Error).message}` };
   }
 }
-
