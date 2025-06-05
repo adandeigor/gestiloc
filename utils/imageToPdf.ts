@@ -3,8 +3,10 @@
 import sharp from 'sharp';
 import PDFDocument from 'pdfkit';
 import { Writable } from 'stream';
-import path from 'path';
-import fs from 'fs';
+import fetch from 'node-fetch';
+
+// Cache global pour le buffer de la police
+let fontBufferCache: Buffer | null = null;
 
 export async function convertImageToPDF(file: File): Promise<{ data: { file: File, path: string } | null; error: string | null }> {
   try {
@@ -29,6 +31,21 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
     const width = metadata.width || 595;
     const height = metadata.height || 842;
 
+    // Charger la police depuis le cache ou Supabase
+    if (!fontBufferCache) {
+      const fontUrl = 'https://gwsosglvvobbfayijeri.supabase.co/storage/v1/object/public/gestionnaire/fonts/open-sans.ttf';
+      try {
+        const fontResponse = await fetch(fontUrl);
+        if (!fontResponse.ok) {
+          throw new Error(`Erreur lors du téléchargement de la police : ${fontResponse.status} ${fontResponse.statusText}`);
+        }
+        fontBufferCache = await fontResponse.buffer();
+      } catch (fontError) {
+        console.error(`Erreur lors du téléchargement de la police depuis Supabase : ${fontError}`);
+        return { data: null, error: 'Erreur lors du chargement de la police' };
+      }
+    }
+
     const chunks: Buffer[] = [];
     const writableStream = new Writable({
       write(chunk, encoding, callback) {
@@ -37,15 +54,11 @@ export async function convertImageToPDF(file: File): Promise<{ data: { file: Fil
       },
     });
 
-    const fontPath = path.join(process.cwd(), 'public', 'fonts', 'open-sans.ttf');
-    if (!fs.existsSync(fontPath)) {
-      console.warn(`Police non trouvée à ${fontPath}, utilisation de Helvetica`);
-    }
-
     const doc = new PDFDocument({
       size: [width, height],
-      font: fs.existsSync(fontPath) ? fontPath : 'Helvetica',
     });
+    doc.registerFont('open-sans', fontBufferCache);
+    doc.font('open-sans');
 
     writableStream.on('error', (streamError) => {
       console.error('Erreur dans le flux d\'écriture :', streamError);
