@@ -31,7 +31,7 @@ const LocataireChart = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const stats = await getUserStats();
+                const stats = await getUserStats() as { unitsOccupied?: number; unitsAvailable?: number };
                 // Utilise les stats pour remplir le graphique
                 setChartData({
                     ...initialChartData,

@@ -121,6 +121,7 @@ const RegisterForm: React.FC = () => {
                     motDePasse: data.password,
                 },
             });
+
             reset();
             toast.success(
                 'Inscription réussie ! Vous pouvez maintenant vous connecter.'
