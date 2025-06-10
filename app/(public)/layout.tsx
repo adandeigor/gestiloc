@@ -1,6 +1,6 @@
-import NavigationBarre from "@/components/design/navigation/navigationBarre";
-import Footer from "@/components/design/sections/footer";
-import Loader from "@/components/Loader";
+import NavigationBarre from '@/components/design/navigation/navigationBarre';
+import Footer from '@/components/design/sections/footer';
+import Loader from '@/components/Loader';
 
 export default function RootLayout({
     children,
@@ -9,10 +9,8 @@ export default function RootLayout({
 }>) {
     return (
         <>
-            <NavigationBarre>
-                {children}
-            </NavigationBarre>
-            <Loader/>
+            <NavigationBarre>{children}</NavigationBarre>
+            <Loader />
             <Footer />
         </>
     );

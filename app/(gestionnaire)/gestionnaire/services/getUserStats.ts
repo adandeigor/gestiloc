@@ -1,13 +1,13 @@
-import getCookie from "@/core/getCookie";
-import { toast } from "sonner";
-import { httpClient } from "@/core/httpClient";
+import getCookie from '@/core/getCookie';
+import { toast } from 'sonner';
+import { httpClient } from '@/core/httpClient';
 
 const getUserStats = async () => {
-    const userid = getCookie("userId");
-    const jwt = getCookie("jwt");
+    const userid = getCookie('userId');
+    const jwt = getCookie('jwt');
 
     if (!userid || !jwt) {
-        toast.error("Utilisateur non authentifié");
+        toast.error('Utilisateur non authentifié');
         return;
     }
     try {

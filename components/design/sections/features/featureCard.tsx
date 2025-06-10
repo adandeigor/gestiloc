@@ -1,14 +1,14 @@
-import { FeaturesListProps } from "./features-list";
+import { FeaturesListProps } from './features-list';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 
-const FeatureCard = ({ title, description, icon:Icon }: FeaturesListProps) => {
+const FeatureCard = ({ title, description, icon: Icon }: FeaturesListProps) => {
     return (
         <Card className="w-full max-w-sm mx-auto my-4 card hover:scale-105 hover:shadow-lg transition-transform duration-300 ease-in-out cursor-pointer">
             <CardHeader className="flex flex-col items-start gap-5">
@@ -18,12 +18,14 @@ const FeatureCard = ({ title, description, icon:Icon }: FeaturesListProps) => {
                 <CardTitle>{title}</CardTitle>
             </CardHeader>
             <CardContent>
-                <CardDescription className="text-sm font-mono">{description}</CardDescription>
+                <CardDescription className="text-sm font-mono">
+                    {description}
+                </CardDescription>
             </CardContent>
             <CardFooter>
                 {/* Add any footer content here if needed */}
             </CardFooter>
         </Card>
-    )
-}
+    );
+};
 export default FeatureCard;
