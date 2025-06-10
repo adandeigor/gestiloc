@@ -19,7 +19,7 @@ export default [
   // Configurations de base
   pluginJs.configs.recommended,
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
-  prettierConfig, // Désactive les règles en conflit avec Prettier
+  prettierConfig,
 
   // Configuration spécifique
   {
@@ -35,12 +35,9 @@ export default [
       prettier: pluginPrettier,
     },
     rules: {
-      // Règles TypeScript
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/explicit-function-return-type': 'warn',
-
-      // Règles pour les importations
+      '@typescript-eslint/explicit-function-return-type': 'off', // Désactivé si gênant
       'import/no-unused-modules': 'error',
       'import/order': [
         'error',
@@ -49,9 +46,8 @@ export default [
           'newlines-between': 'always',
         },
       ],
-
-      // Intégration Prettier
       'prettier/prettier': 'error',
+      'consistent-return': 'off', // Désactive les contrôles sur les retours de fonctions
     },
   },
 ];

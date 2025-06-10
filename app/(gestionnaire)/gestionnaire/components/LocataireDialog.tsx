@@ -255,27 +255,29 @@ export function LocataireDialog({
                 try {
                     const response = await axios.put(url, body);
                     if (response.status !== 200) {
-                        throw new Error('Erreur lors de la mise à jour du locataire');
+                        throw new Error(
+                            'Erreur lors de la mise à jour du locataire'
+                        );
                     }
                     toast.success('Locataire mis à jour avec succès !');
                 } catch {
-                    toast.error(
+                    toast.error('Erreur lors de la mise à jour du locataire');
+                    throw new Error(
                         'Erreur lors de la mise à jour du locataire'
                     );
-                    throw new Error('Erreur lors de la mise à jour du locataire');
                 }
                 toast.success('Locataire mis à jour avec succès !');
             } else {
                 try {
                     const response = await axios.post(url, body);
                     if (response.status !== 201) {
-                        throw new Error('Erreur lors de la création du locataire');
+                        throw new Error(
+                            'Erreur lors de la création du locataire'
+                        );
                     }
                     toast.success('Locataire créé avec succès !');
                 } catch {
-                    toast.error(
-                        'Erreur lors de la création du locataire'
-                    );
+                    toast.error('Erreur lors de la création du locataire');
                     throw new Error('Erreur lors de la création du locataire');
                 }
                 toast.success('Locataire créé avec succès !');
