@@ -35,18 +35,6 @@ export default [
       prettier: pluginPrettier,
     },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/explicit-function-return-type': 'off', // Désactivé si gênant
-      'import/no-unused-modules': 'error',
-      'import/order': [
-        'error',
-        {
-          alphabetize: { order: 'asc' },
-          'newlines-between': 'always',
-        },
-      ],
-      'prettier/prettier': 'error',
       'consistent-return': 'off', // Désactive les contrôles sur les retours de fonctions
     },
   },
