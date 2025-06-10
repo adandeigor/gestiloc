@@ -25,7 +25,7 @@ import 'react-phone-number-input/style.css';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 import { toast } from 'sonner';
 import { useCustomRouter } from '@/core/useCustomRouter';
-import { httpServer } from '@/core/httpClient';
+import { httpClient } from '@/core/httpClient';
 
 // Schéma de validation
 const registerSchema = z
@@ -112,8 +112,7 @@ const RegisterForm: React.FC = () => {
         setLoading(true);
         setErrorMessage(null);
         try {
-            const result = await httpServer('/auth/register', {
-                method: 'POST',
+            await httpClient.post('/auth/register', {
                 body: {
                     nom: data.firstName,
                     prenom: data.lastName,
@@ -122,7 +121,6 @@ const RegisterForm: React.FC = () => {
                     motDePasse: data.password,
                 },
             });
-            if (result.error) throw new Error(result.error);
             reset();
             toast.success(
                 'Inscription réussie ! Vous pouvez maintenant vous connecter.'
