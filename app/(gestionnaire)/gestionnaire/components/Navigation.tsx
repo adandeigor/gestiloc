@@ -109,6 +109,7 @@ export const SidebarNavigation = () => {
                 nav.removeEventListener('navigateerror', handleNavigationEnd);
             };
         }
+        return undefined;
     }, []);
 
     return (

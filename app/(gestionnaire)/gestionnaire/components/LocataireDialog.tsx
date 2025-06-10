@@ -23,7 +23,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { uploadToSupabase } from '@/core/uploadFIle';
 import { Loader2 } from 'lucide-react';
-import { httpClient } from '@/core/httpClient';
+import axios from 'axios';
 
 interface Locataire {
     id: number;
@@ -252,11 +252,33 @@ export function LocataireDialog({
             };
 
             if (locataire) {
-                await httpClient.put(url, body);
+                try {
+                    const response = await axios.put(url, body);
+                    if (response.status !== 200) {
+                        throw new Error('Erreur lors de la mise à jour du locataire');
+                    }
+                    toast.success('Locataire mis à jour avec succès !');
+                } catch {
+                    toast.error(
+                        'Erreur lors de la mise à jour du locataire'
+                    );
+                    throw new Error('Erreur lors de la mise à jour du locataire');
+                }
                 toast.success('Locataire mis à jour avec succès !');
             } else {
-                await httpClient.post(url, body);
-                toast.success('Locataire enregistré avec succès !');
+                try {
+                    const response = await axios.post(url, body);
+                    if (response.status !== 201) {
+                        throw new Error('Erreur lors de la création du locataire');
+                    }
+                    toast.success('Locataire créé avec succès !');
+                } catch {
+                    toast.error(
+                        'Erreur lors de la création du locataire'
+                    );
+                    throw new Error('Erreur lors de la création du locataire');
+                }
+                toast.success('Locataire créé avec succès !');
             }
             onClose();
             reset();
