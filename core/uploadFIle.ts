@@ -22,7 +22,7 @@ export async function uploadToSupabase(
     const filePath = `${folder}/${userId}_${Date.now()}.${fileExt}`;
 
     try {
-        const { data, error } = await supabase.storage
+        const {  error } = await supabase.storage
             .from('gestionnaire')
             .upload(filePath, file, {
                 contentType: file.type || 'application/octet-stream',
