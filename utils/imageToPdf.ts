@@ -47,7 +47,7 @@ export async function convertImageToPDF(file: File): Promise<{
         // Créer un buffer pour collecter les données du PDF
         const chunks: Buffer[] = [];
         const writableStream = new Writable({
-            write(chunk, encoding, callback) {
+            write(chunk, _encoding, callback) {
                 chunks.push(chunk);
                 callback();
             },
